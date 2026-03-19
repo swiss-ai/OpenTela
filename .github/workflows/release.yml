@@ -12,6 +12,8 @@ jobs:
         permissions:
             contents: write
             packages: write
+        env:
+            HAS_ARGO_PAT: ${{ secrets.ARGO_PAT != '' }}
 
         steps:
             - name: Check out source code
@@ -100,7 +102,7 @@ jobs:
                   cache-to: type=gha,mode=max
 
             - name: Update rob-poc prod deployment
-              if: ${{ secrets.ARGO_PAT != '' }}
+              if: env.HAS_ARGO_PAT == 'true'
               env:
                   ARGO_PAT: ${{ secrets.ARGO_PAT }}
               run: |
