@@ -1,20 +1,15 @@
 FROM ubuntu:22.04
 
-ARG VERSION
-ARG TARGETPLATFORM
-
-WORKDIR /app
+ARG TARGETARCH
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
-    tzdata \
-    curl && \
-    case "$TARGETPLATFORM" in \
-      "linux/arm64")  URL="https://github.com/ResearchComputer/OpenComputeFramework/releases/download/${VERSION}/ocf-arm64" ;; \
-      *) URL="https://github.com/ResearchComputer/OpenComputeFramework/releases/download/${VERSION}/ocf-amd64" ;; \
-    esac && \
-    curl -L "$URL" > ocf && \
-    chmod +x ocf
+    tzdata && \
+    rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["/app/ocf"]
+WORKDIR /app
+COPY otela-${TARGETARCH} otela
+RUN chmod +x otela
+
+ENTRYPOINT ["/app/otela"]

@@ -1,25 +1,21 @@
-name: Build and Release
+name: Build and Deploy Dev
 
 on:
     push:
-        tags:
-            - "sai-v*" # Run when pushing a tag like sai-v0.1.0 (swiss-ai fork releases)
+        branches:
+            - main
 
 jobs:
-    build:
-        name: Build, Release, and Publish
+    build-and-deploy:
+        name: Build, Push, and Deploy to Dev
         runs-on: ubuntu-latest
         permissions:
-            contents: write
+            contents: read
             packages: write
 
         steps:
             - name: Check out source code
               uses: actions/checkout@v4
-
-            - name: Get release version
-              run: |
-                  echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
             - name: Set up Go
               uses: actions/setup-go@v5
@@ -29,38 +25,21 @@ jobs:
 
             - name: Set build metadata
               run: |
-                  echo "VERSION=${{ env.RELEASE_TAG }}" >> $GITHUB_ENV
-                  echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+                  SHORT_SHA=$(git rev-parse --short HEAD)
+                  echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
+                  echo "VERSION=dev-${SHORT_SHA}" >> $GITHUB_ENV
+                  echo "COMMIT_HASH=${SHORT_SHA}" >> $GITHUB_ENV
                   echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
 
-            - name: Sign build attestation
-              if: env.BUILD_SIGN_KEY != ''
-              env:
-                  BUILD_SIGN_KEY: ${{ secrets.BUILD_SIGN_KEY }}
+            - name: Build binaries
               run: |
                   cd src
-                  BUILD_SIG=$(go run ./internal/attestation/cmd/buildsign sign "${VERSION}" "${COMMIT_HASH}" "${BUILD_SIGN_KEY}")
-                  echo "BUILD_SIG=${BUILD_SIG}" >> $GITHUB_ENV
-
-            - name: Build production binaries
-              run: |
-                  cd src
-                  LDFLAGS="-X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE} -X main.buildSig=${BUILD_SIG}"
+                  LDFLAGS="-X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}"
                   GOOS=linux GOARCH=amd64 GIN_MODE=release go build -trimpath -tags "" -ldflags "${LDFLAGS}" -o ./build/release/ ./entry/...
                   mv build/release/entry build/release/otela-amd64
                   GOOS=linux GOARCH=arm64 GIN_MODE=release go build -trimpath -tags "" -ldflags "${LDFLAGS}" -o ./build/release/ ./entry/...
                   mv build/release/entry build/release/otela-arm64
 
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v2
-              with:
-                  files: |
-                      src/build/release/otela-amd64
-                      src/build/release/otela-arm64
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            # Copy binaries into Docker context
             - name: Prepare Docker context
               run: |
                   cp src/build/release/otela-amd64 docker/dispatcher/
@@ -79,35 +58,28 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Extract Docker metadata
-              id: meta
-              uses: docker/metadata-action@v5
-              with:
-                  images: ghcr.io/swiss-ai/opentela
-                  tags: |
-                      type=ref,event=tag
-
             - name: Build and push Docker image
               uses: docker/build-push-action@v6
               with:
                   context: ./docker/dispatcher
                   file: ./docker/dispatcher/Dockerfile
                   push: true
-                  tags: ${{ steps.meta.outputs.tags }}
+                  tags: |
+                      ghcr.io/swiss-ai/opentela:dev-${{ env.SHORT_SHA }}
+                      ghcr.io/swiss-ai/opentela:latest
                   platforms: linux/amd64,linux/arm64
-                  labels: ${{ steps.meta.outputs.labels }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
-            - name: Update rob-poc prod deployment
+            - name: Update rob-poc dev deployment
               if: env.ARGO_PAT != ''
               env:
                   ARGO_PAT: ${{ secrets.ARGO_PAT }}
               run: |
                   git clone https://x-access-token:${ARGO_PAT}@github.com/breithorn-poc/rob-poc.git /tmp/rob-poc
                   cd /tmp/rob-poc
-                  sed -i "s|image: ghcr.io/swiss-ai/opentela:.*|image: ghcr.io/swiss-ai/opentela:${{ env.RELEASE_TAG }}|" serving-otela/prod/deployment.yaml
+                  sed -i "s|image: ghcr.io/swiss-ai/opentela:.*|image: ghcr.io/swiss-ai/opentela:dev-${{ env.SHORT_SHA }}|" serving-otela/dev/deployment.yaml
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git add serving-otela/prod/deployment.yaml
-                  git diff --cached --quiet || git commit -m "Deploy otela prod ${{ env.RELEASE_TAG }}" && git push
+                  git add serving-otela/dev/deployment.yaml
+                  git diff --cached --quiet || git commit -m "Deploy otela dev dev-${{ env.SHORT_SHA }}" && git push
