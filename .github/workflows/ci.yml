@@ -113,3 +113,19 @@ jobs:
                   version: v2.6
                   working-directory: src
                   args: --timeout=5m
+
+    notify:
+        name: Slack Notification
+        runs-on: ubuntu-latest
+        needs: [test, lint]
+        if: always()
+        steps:
+            - name: Notify Slack
+              uses: slackapi/slack-github-action@v2
+              with:
+                  webhook-type: incoming-webhook
+                  webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+                  payload: |
+                      {
+                        "text": "${{ github.repository }} CI — ${{ contains(needs.*.result, 'failure') && 'FAILED' || 'passed' }}\n${{ github.event.head_commit.message || github.event.pull_request.title }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"
+                      }
