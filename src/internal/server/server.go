@@ -332,7 +332,7 @@ func StartServer() {
 	go func() {
 		err := http.Serve(p2plistener, r)
 		if err != nil {
-			common.Logger.Errorf("http.Serve: %s", err)
+			common.Logger.Debugf("http.Serve: %s", err)
 		}
 	}()
 	go func() {

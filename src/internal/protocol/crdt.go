@@ -75,7 +75,7 @@ func GetCRDTStore() (*crdt.Datastore, context.CancelFunc) {
 			for {
 				msg, err := netSubs.Next(ctx)
 				if err != nil {
-					fmt.Println(err)
+					common.Logger.Debug("pubsub subscription error: ", err)
 					break
 				}
 				host.ConnManager().TagPeer(msg.ReceivedFrom, "keep", 100)
@@ -113,7 +113,7 @@ func GetCRDTStore() (*crdt.Datastore, context.CancelFunc) {
 						return
 					default:
 						if err := topic.Publish(ctx, []byte("ping")); err != nil {
-							common.Logger.Warn("Error while publishing ping: ", err)
+							common.Logger.Debug("Error while publishing ping: ", err)
 						}
 						time.Sleep(20 * time.Second)
 					}
@@ -178,7 +178,7 @@ func GetCRDTStore() (*crdt.Datastore, context.CancelFunc) {
 			if err == nil {
 				UpdateNodeTableHook(k, value)
 			} else {
-				common.Logger.Error("Error while marshalling peer", err)
+				common.Logger.Debug("Error while marshalling peer", err)
 			}
 		}
 		opts.DeleteHook = func(k ds.Key) {
@@ -232,6 +232,6 @@ func ClearCRDTStore() {
 	host, _ := GetP2PNode(nil)
 	err := common.RemoveDir(common.GetDBPath(host.ID().String()))
 	if err != nil {
-		common.Logger.Error("Error while removing directory: ", err)
+		common.Logger.Debug("Error while removing directory: ", err)
 	}
 }

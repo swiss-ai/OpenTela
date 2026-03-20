@@ -267,7 +267,7 @@ func UpdateNodeTable(peer Peer) {
 	value, err := json.Marshal(peer)
 	common.ReportError(err, "Error while marshalling peer")
 	if err := store.Put(ctx, key, value); err != nil {
-		common.Logger.Error("Error while updating node table: ", err)
+		common.Logger.Debug("Error while updating node table: ", err)
 	}
 }
 
@@ -293,7 +293,7 @@ func MarkSelfAsBootstrap() {
 		UpdateNodeTableHook(key, value)
 		common.ReportError(err, "Error while marshalling peer")
 		if err := store.Put(ctx, key, value); err != nil {
-			common.Logger.Error("Error while registering bootstrap: ", err)
+			common.Logger.Debug("Error while registering bootstrap: ", err)
 		}
 	}
 }
@@ -315,12 +315,12 @@ func AnnounceLeave() {
 	value, err := json.Marshal(myself)
 	myselfMu.Unlock()
 	if err != nil {
-		common.Logger.Error("Error while marshalling peer for leave: ", err)
+		common.Logger.Debug("Error while marshalling peer for leave: ", err)
 		return
 	}
 
 	if err := store.Put(ctx, key, value); err != nil {
-		common.Logger.Error("Error while announcing leave: ", err)
+		common.Logger.Debug("Error while announcing leave: ", err)
 	}
 }
 
@@ -615,7 +615,7 @@ func InitializeMyself(walletPubkeyOverride string, wm *wallet.WalletManager) {
 	common.ReportError(err, "Error while marshalling peer")
 	err = store.Put(ctx, key, value)
 	if err != nil {
-		common.Logger.Error("Error while initializing myself in the node table: ", err)
+		common.Logger.Debug("Error while initializing myself in the node table: ", err)
 	}
 }
 

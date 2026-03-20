@@ -155,13 +155,13 @@ func healthCheckRemote(port, healthPath string, maxTries int) error {
 func registerLLMService(port string) {
 	modelsBytes, err := common.RemoteGET("http://localhost:" + port + "/v1/models")
 	if err != nil {
-		common.Logger.Error("could not fetch models from LLM service: ", err)
+		common.Logger.Debug("could not fetch models from LLM service: ", err)
 	}
 	common.Logger.Debug("Fetched models from LLM service: ", string(modelsBytes))
 	var availableModels common.LMAvailableModels
 	err = json.Unmarshal(modelsBytes, &availableModels)
 	if err != nil {
-		common.Logger.Error("could not unmarshal models from LLM service: ", err)
+		common.Logger.Debug("could not unmarshal models from LLM service: ", err)
 	}
 	var identityGroup []string
 	for _, model := range availableModels.Models {
@@ -249,12 +249,12 @@ func ReannounceLocalServices() {
 	value, err := json.Marshal(myself)
 	myselfMu.Unlock()
 	if err != nil {
-		common.Logger.Error("Error marshalling self during reannounce: ", err)
+		common.Logger.Debug("Error marshalling self during reannounce: ", err)
 		return
 	}
 	UpdateNodeTableHook(key, value)
 	if err := store.Put(ctx, key, value); err != nil {
-		common.Logger.Warn("Failed to reannounce local services: ", err)
+		common.Logger.Debug("Failed to reannounce local services: ", err)
 	} else {
 		common.Logger.Debug("Re-announced local services")
 	}

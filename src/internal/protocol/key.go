@@ -30,7 +30,7 @@ func ResolveKeyPath() (string, error) {
 func WriteKeyToFile(priv crypto.PrivKey) {
 	keyData, err := crypto.MarshalPrivateKey(priv)
 	if err != nil {
-		common.Logger.Error("Error while marshalling private key: ", err)
+		common.Logger.Debug("Error while marshalling private key: ", err)
 	}
 	keyPath, err := ResolveKeyPath()
 	if err != nil {
@@ -66,7 +66,7 @@ func LoadKeyFromFile() crypto.PrivKey {
 	}
 	priv, err := crypto.UnmarshalPrivateKey(keyData)
 	if err != nil {
-		common.Logger.Error("Error while unmarshalling private key: ", err)
+		common.Logger.Debug("Error while unmarshalling private key: ", err)
 		return nil
 	}
 	return priv

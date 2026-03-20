@@ -54,6 +54,6 @@ func InitLogger() {
 // Logs an error and panics
 func ReportError(err error, msg string) {
 	if err != nil {
-		Logger.Error(msg, " error: ", err)
+		Logger.Debug(msg, " error: ", err)
 	}
 }

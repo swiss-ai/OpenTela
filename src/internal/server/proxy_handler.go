@@ -101,7 +101,7 @@ func getTrustedTransport() *http.Transport {
 
 func ErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
 	if _, werr := fmt.Fprintf(res, "ERROR: %s", err.Error()); werr != nil {
-		common.Logger.Error("Error writing error response: ", werr)
+		common.Logger.Debug("Error writing error response: ", werr)
 	}
 }
 
