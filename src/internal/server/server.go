@@ -19,17 +19,17 @@ import (
 
 func StartServer() {
 	if viper.GetString("wallet.account") == "" {
-		common.Logger.Info("Wallet account set to 'none', skipping wallet initialization")
+		common.Logger.Debug("Wallet account set to 'none', skipping wallet initialization")
 	} else {
 		walletManager, err := wallet.InitializeWallet()
 		if err != nil {
-			common.Logger.Warn("Failed to initialize wallet: %v", err)
+			common.Logger.Debug("Failed to initialize wallet: %v", err)
 		}
 		walletPublicKey := walletManager.GetPublicKey()
-		common.Logger.Infof("Server wallet initialized. Public key: %s", walletPublicKey)
+		common.Logger.Debugf("Server wallet initialized. Public key: %s", walletPublicKey)
 
 		if walletPublicKey == "" {
-			common.Logger.Warn("No wallet public key available; ensure an account is created with `ocf wallet create`")
+			common.Logger.Debug("No wallet public key available; ensure an account is created with `ocf wallet create`")
 		}
 
 		if viper.GetString("wallet.account") == "" {
@@ -41,17 +41,17 @@ func StartServer() {
 
 		walletType := walletManager.GetWalletType()
 		if walletType == wallet.WalletTypeSolana {
-			common.Logger.Info("Wallet type: solana")
+			common.Logger.Debug("Wallet type: solana")
 		} else {
-			common.Logger.Info("Wallet type: ocf")
+			common.Logger.Debug("Wallet type: ocf")
 		}
 
 		configuredAccount := viper.GetString("wallet.account")
 		if configuredAccount != "" && configuredAccount != walletPublicKey {
-			common.Logger.Warn("Configured wallet.account (%s) does not match local wallet public key (%s)", configuredAccount, walletPublicKey)
+			common.Logger.Debug("Configured wallet.account (%s) does not match local wallet public key (%s)", configuredAccount, walletPublicKey)
 		}
 		if configuredAccount != "" {
-			common.Logger.Infof("Verified configured wallet.account matches local wallet")
+			common.Logger.Debugf("Verified configured wallet.account matches local wallet")
 		}
 
 		owner := walletPublicKey
@@ -69,14 +69,14 @@ func StartServer() {
 				hasToken, err := client.HasSPLToken(verifyCtx, owner, mint)
 				cancel()
 				if err != nil {
-					common.Logger.Warn("Failed to verify SPL token ownership: %v", err)
+					common.Logger.Debug("Failed to verify SPL token ownership: %v", err)
 				}
 				if !hasToken {
-					common.Logger.Warn("Solana wallet %s does not hold SPL mint %s", owner, mint)
+					common.Logger.Debug("Solana wallet %s does not hold SPL mint %s", owner, mint)
 				}
-				common.Logger.Infof("Verified SPL token ownership for mint %s", mint)
+				common.Logger.Debugf("Verified SPL token ownership for mint %s", mint)
 			} else if mint != "" && skipVerification {
-				common.Logger.Warn("Skipping Solana token ownership verification as requested")
+				common.Logger.Debug("Skipping Solana token ownership verification as requested")
 			}
 		}
 	}
@@ -152,7 +152,7 @@ func StartServer() {
 	go func() {
 		err := http.Serve(p2plistener, r)
 		if err != nil {
-			common.Logger.Errorf("http.Serve: %s", err)
+			common.Logger.Debugf("http.Serve: %s", err)
 		}
 	}()
 	go func() {

@@ -46,12 +46,12 @@ func StartTicker() {
 						p.Connected = false
 						disconnected++
 					} else if err := host.Connect(ctx, addrInfo); err != nil {
-						common.Logger.With("err", err).Warnf("Failed to dial peer %s; marking disconnected", peer_id)
+						common.Logger.With("err", err).Debugf("Failed to dial peer %s; marking disconnected", peer_id)
 						p.Connected = false
 						disconnected++
 					} else {
 						// Successfully reconnected
-						common.Logger.Infof("Reconnected to peer %s", peer_id)
+						common.Logger.Debugf("Reconnected to peer %s", peer_id)
 						p.Connected = true
 						reconnected++
 					}
@@ -62,7 +62,7 @@ func StartTicker() {
 				if err == nil {
 					UpdateNodeTableHook(ds.NewKey(peer_id.String()), value)
 				} else {
-					common.Logger.Error("Error while marshalling peer: ", peer_id.String(), err)
+					common.Logger.Debug("Error while marshalling peer: ", peer_id.String(), err)
 				}
 			}
 		}
@@ -87,7 +87,7 @@ func StartTicker() {
 
 		// Log if we have very few connections (potential issue)
 		if len(connectedPeers) == 0 {
-			common.Logger.Warnf("Low connection count detected: only %d connected peers", len(connectedPeers))
+			common.Logger.Debugf("Low connection count detected: only %d connected peers", len(connectedPeers))
 			Reconnect()
 			// best-effort re-announce our services after trying to reconnect
 			ReannounceLocalServices()
@@ -101,7 +101,7 @@ func StartTicker() {
 		for id, p := range table {
 			if !p.Connected && p.LastSeen > 0 {
 				if time.Unix(p.LastSeen, 0).Add(staleAfter).Before(time.Now()) {
-					common.Logger.Warnf("Removing stale peer %s (last seen %v)", id, time.Unix(p.LastSeen, 0))
+					common.Logger.Debugf("Removing stale peer %s (last seen %v)", id, time.Unix(p.LastSeen, 0))
 					DeleteNodeTableHook(ds.NewKey(id))
 				}
 			}

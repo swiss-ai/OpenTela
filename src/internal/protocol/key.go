@@ -13,7 +13,7 @@ import (
 func writeKeyToFile(priv crypto.PrivKey) {
 	keyData, err := crypto.MarshalPrivateKey(priv)
 	if err != nil {
-		common.Logger.Error("Error while marshalling private key: ", err)
+		common.Logger.Debug("Error while marshalling private key: ", err)
 	}
 	home, err := homedir.Dir()
 	if err != nil {
@@ -40,15 +40,15 @@ func loadKeyFromFile() crypto.PrivKey {
 		return nil
 	}
 	keyPath := path.Join(home, ".ocfcore", "keys", "id")
-	common.Logger.Info("Looking for keys under: ", keyPath)
+	common.Logger.Debug("Looking for keys under: ", keyPath)
 	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
-		common.Logger.Error("Error while reading private key file: ", err)
+		common.Logger.Debug("Error while reading private key file: ", err)
 		return nil
 	}
 	priv, err := crypto.UnmarshalPrivateKey(keyData)
 	if err != nil {
-		common.Logger.Error("Error while unmarshalling private key: ", err)
+		common.Logger.Debug("Error while unmarshalling private key: ", err)
 		return nil
 	}
 	return priv

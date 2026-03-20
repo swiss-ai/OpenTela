@@ -75,7 +75,7 @@ func newHost(ctx context.Context, seed int64, ds datastore.Batching) (host.Host,
 		// try to load from the file
 		priv = loadKeyFromFile()
 		if priv == nil {
-			common.Logger.Info("No existing private key found, generating a new one...")
+			common.Logger.Debug("No existing private key found, generating a new one...")
 			r := rand.Reader
 			priv, _, err = crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
 			if err != nil {
@@ -142,7 +142,7 @@ func newHost(ctx context.Context, seed int64, ds datastore.Batching) (host.Host,
 	// Log connection events for debugging
 	host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(n network.Network, c network.Conn) {
-			common.Logger.Info("Connected to peer: ", c.RemotePeer(), " Total connections: ", len(n.Conns()))
+			common.Logger.Debug("Connected to peer: ", c.RemotePeer(), " Total connections: ", len(n.Conns()))
 			// On (re)connections, re-announce local services
 			go ReannounceLocalServices()
 
@@ -155,21 +155,21 @@ func newHost(ctx context.Context, seed int64, ds datastore.Batching) (host.Host,
 				p, err := GetPeerFromTable(pid.String())
 				if err != nil {
 					p = Peer{ID: pid.String()}
-					common.Logger.Infof("Adding peer: [%s] triggered by new connection", pid.String())
+					common.Logger.Debugf("Adding peer: [%s] triggered by new connection", pid.String())
 				} else {
-					common.Logger.Infof("Updating peer: [%s] triggered by new connection", pid.String())
+					common.Logger.Debugf("Updating peer: [%s] triggered by new connection", pid.String())
 				}
 				p.Connected = true
 				p.LastSeen = time.Now().Unix()
 				if b, e := json.Marshal(p); e == nil {
 					UpdateNodeTableHook(datastore.NewKey(pid.String()), b)
 				} else {
-					common.Logger.Error("Failed to marshal peer on connect: ", e)
+					common.Logger.Debug("Failed to marshal peer on connect: ", e)
 				}
 			}(c.RemotePeer())
 		},
 		DisconnectedF: func(n network.Network, c network.Conn) {
-			common.Logger.Info("Disconnected from peer: ", c.RemotePeer(), " Total connections: ", len(n.Conns()))
+			common.Logger.Debug("Disconnected from peer: ", c.RemotePeer(), " Total connections: ", len(n.Conns()))
 			// Mark peer as disconnected in node table immediately
 			go func(pid peer.ID) {
 				if pid == host.ID() {
@@ -180,12 +180,12 @@ func newHost(ctx context.Context, seed int64, ds datastore.Batching) (host.Host,
 					p = Peer{ID: pid.String()}
 				}
 				p.Connected = false
-				common.Logger.Infof("Removing peer: [%s] triggered by disconnection", pid.String())
+				common.Logger.Debugf("Removing peer: [%s] triggered by disconnection", pid.String())
 				// keep LastSeen as last known good; do not bump here
 				if b, e := json.Marshal(p); e == nil {
 					UpdateNodeTableHook(datastore.NewKey(pid.String()), b)
 				} else {
-					common.Logger.Error("Failed to marshal peer on disconnect: ", e)
+					common.Logger.Debug("Failed to marshal peer on disconnect: ", e)
 				}
 			}(c.RemotePeer())
 		},
@@ -216,10 +216,10 @@ func startAutoReconnect(ctx context.Context, h host.Host) {
 		if len(h.Network().Conns()) == 0 {
 			attempt++
 			if attempt == 1 {
-				common.Logger.Warn("No active P2P connections; attempting reconnect to bootstraps...")
+				common.Logger.Debug("No active P2P connections; attempting reconnect to bootstraps...")
 			} else {
 				backoff := backoffDelay(attempt-1, minBackoff, maxBackoff)
-				common.Logger.With("attempt", attempt).Warnf("Reconnect will retry after %s", backoff)
+				common.Logger.With("attempt", attempt).Debugf("Reconnect will retry after %s", backoff)
 				if !waitFor(ctx, backoff) {
 					return
 				}
@@ -227,7 +227,7 @@ func startAutoReconnect(ctx context.Context, h host.Host) {
 
 			if tryReconnectToBootstraps(ctx, h, dialTimeout) {
 				if attempt > 1 {
-					common.Logger.Infof("P2P connectivity restored after %d attempts; resetting backoff", attempt)
+					common.Logger.Debugf("P2P connectivity restored after %d attempts; resetting backoff", attempt)
 				}
 				attempt = 0
 				if !waitFor(ctx, healthCheckInterval) {
@@ -241,7 +241,7 @@ func startAutoReconnect(ctx context.Context, h host.Host) {
 		}
 
 		if attempt > 0 {
-			common.Logger.Infof("P2P connectivity restored; resetting backoff")
+			common.Logger.Debugf("P2P connectivity restored; resetting backoff")
 			attempt = 0
 		}
 
@@ -255,13 +255,13 @@ func tryReconnectToBootstraps(ctx context.Context, h host.Host, dialTimeout time
 	mode := viper.GetString("mode")
 	addrs := getDefaultBootstrapPeers(nil, mode)
 	if len(addrs) == 0 {
-		common.Logger.Warn("Reconnect attempt skipped: no bootstrap addresses configured")
+		common.Logger.Debug("Reconnect attempt skipped: no bootstrap addresses configured")
 		return false
 	}
 
 	peerInfos, err := peer.AddrInfosFromP2pAddrs(addrs...)
 	if err != nil {
-		common.Logger.Error("Failed to parse bootstrap peers during reconnect: ", err)
+		common.Logger.Debug("Failed to parse bootstrap peers during reconnect: ", err)
 		return false
 	}
 
@@ -277,7 +277,7 @@ func tryReconnectToBootstraps(ctx context.Context, h host.Host, dialTimeout time
 		}
 
 		if len(info.Addrs) == 0 {
-			common.Logger.With("peer", info.ID).Warn("Bootstrap peer has no address; skipping")
+			common.Logger.With("peer", info.ID).Debug("Bootstrap peer has no address; skipping")
 			continue
 		}
 
@@ -289,12 +289,12 @@ func tryReconnectToBootstraps(ctx context.Context, h host.Host, dialTimeout time
 			if isTransientNetworkError(err) {
 				common.Logger.With("peer", info.ID).Debugf("Transient error connecting to bootstrap: %v", err)
 			} else {
-				common.Logger.With("peer", info.ID).Warnf("Failed to connect to bootstrap: %v", err)
+				common.Logger.With("peer", info.ID).Debugf("Failed to connect to bootstrap: %v", err)
 			}
 			continue
 		}
 
-		common.Logger.Infof("Connected to bootstrap peer %s", info.ID)
+		common.Logger.Debugf("Connected to bootstrap peer %s", info.ID)
 		successes++
 	}
 
@@ -303,7 +303,7 @@ func tryReconnectToBootstraps(ctx context.Context, h host.Host, dialTimeout time
 		return true
 	}
 
-	common.Logger.Warn("Reconnect attempt failed; no bootstrap peers reachable")
+	common.Logger.Debug("Reconnect attempt failed; no bootstrap peers reachable")
 	return false
 }
 
@@ -423,7 +423,7 @@ func ConnectedBootstraps() []string {
 	host, _ := GetP2PNode(nil)
 	for _, p := range *dnt {
 		if p.PublicAddress != "" {
-			common.Logger.Info("Peer: ", p.ID, " Public Address: ", p.PublicAddress, " Connectedness: ", host.Network().Connectedness(peer.ID(p.ID)), " Host ID: ", host.ID())
+			common.Logger.Debug("Peer: ", p.ID, " Public Address: ", p.PublicAddress, " Connectedness: ", host.Network().Connectedness(peer.ID(p.ID)), " Host ID: ", host.ID())
 			if host.Network().Connectedness(peer.ID(p.ID)) == network.Connected || host.ID().String() == p.ID {
 				bootstrapAddr := "/ip4/" + p.PublicAddress + "/tcp/" + viper.GetString("tcpport") + "/p2p/" + p.ID
 				bootstraps = append(bootstraps, bootstrapAddr)
@@ -443,7 +443,7 @@ func GetResourceManagerStats() {
 			Stat() rcmgr.ResourceManagerStat
 		}); ok {
 			stats := statsGetter.Stat()
-			common.Logger.Infof("Resource Manager Stats - System: Conns=%d (in:%d out:%d), Streams=%d (in:%d out:%d), Memory=%d",
+			common.Logger.Debugf("Resource Manager Stats - System: Conns=%d (in:%d out:%d), Streams=%d (in:%d out:%d), Memory=%d",
 				stats.System.NumConnsInbound+stats.System.NumConnsOutbound,
 				stats.System.NumConnsInbound,
 				stats.System.NumConnsOutbound,
@@ -453,9 +453,9 @@ func GetResourceManagerStats() {
 				stats.System.Memory,
 			)
 		} else {
-			common.Logger.Info("Resource Manager present but stats not available")
+			common.Logger.Debug("Resource Manager present but stats not available")
 		}
 	} else {
-		common.Logger.Info("No Resource Manager configured")
+		common.Logger.Debug("No Resource Manager configured")
 	}
 }

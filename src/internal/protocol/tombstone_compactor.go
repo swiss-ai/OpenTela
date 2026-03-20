@@ -28,7 +28,7 @@ func startTombstoneCompactor(store *crdt.Datastore) {
 		}
 
 		if retention <= 0 {
-			common.Logger.Info("Tombstone compaction disabled (retention <= 0)")
+			common.Logger.Debug("Tombstone compaction disabled (retention <= 0)")
 			return
 		}
 		if interval <= 0 {
@@ -43,21 +43,21 @@ func startTombstoneCompactor(store *crdt.Datastore) {
 			run := func() {
 				// 1. Clean up "Left" nodes (Application level tombstones)
 				if removedLeft, err := tm.CleanupLeftNodes(ctx); err != nil {
-					common.Logger.Warnf("Left nodes cleanup failed: %v", err)
+					common.Logger.Debugf("Left nodes cleanup failed: %v", err)
 				} else if removedLeft > 0 {
-					common.Logger.Infof("Cleaned up %d left nodes", removedLeft)
+					common.Logger.Debugf("Cleaned up %d left nodes", removedLeft)
 				}
 
 				// 2. Compact CRDT tombstones (Storage level tombstones)
 				removed, err := store.CompactTombstones(ctx, retention, batch)
 				if err != nil {
 					if ctx.Err() == nil {
-						common.Logger.Warnf("Tombstone compaction failed: %v", err)
+						common.Logger.Debugf("Tombstone compaction failed: %v", err)
 					}
 					return
 				}
 				if removed > 0 {
-					common.Logger.Infof("Compacted %d tombstone entries older than %s", removed, retention)
+					common.Logger.Debugf("Compacted %d tombstone entries older than %s", removed, retention)
 				}
 			}
 

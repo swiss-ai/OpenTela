@@ -95,13 +95,13 @@ func UpdateNodeTable(peer Peer) {
 	value, err := json.Marshal(peer)
 	common.ReportError(err, "Error while marshalling peer")
 	if err := store.Put(ctx, key, value); err != nil {
-		common.Logger.Error("Error while updating node table: ", err)
+		common.Logger.Debug("Error while updating node table: ", err)
 	}
 }
 
 func MarkSelfAsBootstrap() {
 	if viper.GetString("public-addr") != "" {
-		common.Logger.Info("Registering myself as a bootstrap node")
+		common.Logger.Debug("Registering myself as a bootstrap node")
 		ctx := context.Background()
 		store, _ := GetCRDTStore()
 		host, _ := GetP2PNode(nil)
@@ -115,7 +115,7 @@ func MarkSelfAsBootstrap() {
 		UpdateNodeTableHook(key, value)
 		common.ReportError(err, "Error while marshalling peer")
 		if err := store.Put(ctx, key, value); err != nil {
-			common.Logger.Error("Error while registering bootstrap: ", err)
+			common.Logger.Debug("Error while registering bootstrap: ", err)
 		}
 	}
 }
@@ -126,7 +126,7 @@ func AnnounceLeave() {
 	// broadcast the peer to the network
 	store, _ := GetCRDTStore()
 	key := ds.NewKey(host.ID().String())
-	common.Logger.Info("Announcing myself as LEFT from the network")
+	common.Logger.Debug("Announcing myself as LEFT from the network")
 
 	// Update self status to LEFT
 	myself.Status = LEFT
@@ -135,12 +135,12 @@ func AnnounceLeave() {
 
 	value, err := json.Marshal(myself)
 	if err != nil {
-		common.Logger.Error("Error while marshalling peer for leave: ", err)
+		common.Logger.Debug("Error while marshalling peer for leave: ", err)
 		return
 	}
 
 	if err := store.Put(ctx, key, value); err != nil {
-		common.Logger.Error("Error while announcing leave: ", err)
+		common.Logger.Debug("Error while announcing leave: ", err)
 	}
 }
 
@@ -263,14 +263,14 @@ func InitializeMyself(ownerOverride string) {
 	// Add wallet address as provider if available
 	if ownerOverride != "" {
 		myself.Owner = ownerOverride
-		common.Logger.Infof("Using verified wallet account for provider: %s", myself.Owner)
+		common.Logger.Debugf("Using verified wallet account for provider: %s", myself.Owner)
 	} else if account := viper.GetString("wallet.account"); account != "" {
 		myself.Owner = account
-		common.Logger.Infof("Using configured wallet account for provider: %s", myself.Owner)
+		common.Logger.Debugf("Using configured wallet account for provider: %s", myself.Owner)
 	} else if wm, err := wallet.InitializeWallet(); err == nil && wm.WalletExists() {
 		myself.Owner = wm.GetPublicKey()
 		if myself.Owner != "" {
-			common.Logger.Infof("Added wallet address as provider: %s", myself.Owner)
+			common.Logger.Debugf("Added wallet address as provider: %s", myself.Owner)
 		}
 	}
 
@@ -279,6 +279,6 @@ func InitializeMyself(ownerOverride string) {
 	common.ReportError(err, "Error while marshalling peer")
 	err = store.Put(ctx, key, value)
 	if err != nil {
-		common.Logger.Error("Error while initializing myself in the node table: ", err)
+		common.Logger.Debug("Error while initializing myself in the node table: ", err)
 	}
 }

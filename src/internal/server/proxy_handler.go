@@ -44,7 +44,7 @@ func getGlobalTransport() *http.Transport {
 
 func ErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
 	if _, werr := fmt.Fprintf(res, "ERROR: %s", err.Error()); werr != nil {
-		common.Logger.Error("Error writing error response: ", werr)
+		common.Logger.Debug("Error writing error response: ", werr)
 	}
 }
 
@@ -90,7 +90,7 @@ func P2PForwardHandler(c *gin.Context) {
 		Host:   requestPeer,
 		Path:   requestPath,
 	}
-	common.Logger.Infof("Forwarding request to %s", target.String())
+	common.Logger.Debugf("Forwarding request to %s", target.String())
 
 	director := func(req *http.Request) {
 		req.URL.Scheme = target.Scheme
@@ -214,8 +214,8 @@ func GlobalServiceForwardHandler(c *gin.Context) {
 	event := []axiom.Event{{ingest.TimestampField: time.Now(), "event": "Service Forward", "from": protocol.MyID, "to": targetPeer, "path": requestPath, "service": serviceName}}
 	IngestEvents(event)
 
-	common.Logger.Info("Forwarding request to: ", targetPeer)
-	common.Logger.Info("Forwarding path to: ", requestPath)
+	common.Logger.Debug("Forwarding request to: ", targetPeer)
+	common.Logger.Debug("Forwarding path to: ", requestPath)
 	target := url.URL{
 		Scheme: "libp2p",
 		Host:   targetPeer,
