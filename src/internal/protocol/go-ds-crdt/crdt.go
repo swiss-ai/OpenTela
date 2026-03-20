@@ -566,7 +566,7 @@ func (store *Datastore) logStats(ctx context.Context) {
 				store.logger.Errorf("error listing heads: %s", err)
 			}
 
-			store.logger.Infof(
+			store.logger.Debugf(
 				"Number of heads: %d. Current max height: %d. Queued jobs: %d. Dirty: %t",
 				len(heads),
 				height,
@@ -808,11 +808,7 @@ func (store *Datastore) processNode(ctx context.Context, ng *crdtNodeGetter, roo
 	store.queuedChildren.Remove(node.Cid())
 
 	// Some informative logging
-	if prio := delta.GetPriority(); prio%50 == 0 {
-		common.Logger.Infof("merged delta from node %s (priority: %d)", current, prio)
-	} else {
-		common.Logger.Debugf("merged delta from node %s (priority: %d)", current, prio)
-	}
+	common.Logger.Debugf("merged delta from node %s (priority: %d)", current, delta.GetPriority())
 
 	links := node.Links()
 	children := []cid.Cid{}
@@ -935,7 +931,7 @@ func (store *Datastore) repairDAG(ctx context.Context) error {
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				store.logger.Infof(
+				store.logger.Debugf(
 					"DAG repair in progress. Visited nodes: %d. Last priority: %d. Queued nodes: %d",
 					atomic.LoadUint64(&visitedNodes),
 					atomic.LoadUint64(&lastPriority),
