@@ -43,6 +43,8 @@ func InitLogger() {
 		config.Level.SetLevel(zapcore.InfoLevel)
 	}
 	// fmt.Printf("Log level set to %s\n", config.Level.Level().String())
+	config.OutputPaths = []string{"stdout"}
+	config.ErrorOutputPaths = []string{"stdout"}
 	zapLogger, err := config.Build(zap.AddStacktrace(zapcore.ErrorLevel))
 	// defer func() { _ = zapLogger.Sync() }()
 	if err != nil {
