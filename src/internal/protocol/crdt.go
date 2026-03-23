@@ -32,9 +32,9 @@ var cancelSubscriptions context.CancelFunc
 func GetCRDTStore() (*crdt.Datastore, context.CancelFunc) {
 	once.Do(func() {
 		// Suppress noisy third-party loggers (boxo provider/reprovider busy-loops when no peers)
-		logging.SetLogLevel("provider", "FATAL")
-		logging.SetLogLevel("provider.simple", "FATAL")
-		logging.SetLogLevel("provider.queue", "FATAL")
+		_ = logging.SetLogLevel("provider", "FATAL")
+		_ = logging.SetLogLevel("provider.simple", "FATAL")
+		_ = logging.SetLogLevel("provider.queue", "FATAL")
 
 		mode := viper.GetString("mode")
 		host, dht := GetP2PNode(nil)
