@@ -50,6 +50,7 @@ jobs:
                   mv build/release/entry build/release/otela-amd64
                   GOOS=linux GOARCH=arm64 GIN_MODE=release go build -trimpath -tags "" -ldflags "${LDFLAGS}" -o ./build/release/ ./entry/...
                   mv build/release/entry build/release/otela-arm64
+                  chmod +x build/release/otela-amd64 build/release/otela-arm64
 
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
