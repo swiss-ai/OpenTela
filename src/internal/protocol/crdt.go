@@ -9,6 +9,7 @@ import (
 	"time"
 
 	crdt "opentela/internal/protocol/go-ds-crdt"
+	logging "github.com/ipfs/go-log/v2"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	ds "github.com/ipfs/go-datastore"
@@ -30,6 +31,11 @@ var cancelSubscriptions context.CancelFunc
 
 func GetCRDTStore() (*crdt.Datastore, context.CancelFunc) {
 	once.Do(func() {
+		// Suppress noisy third-party loggers (boxo provider/reprovider busy-loops when no peers)
+		_ = logging.SetLogLevel("provider", "FATAL")
+		_ = logging.SetLogLevel("provider.simple", "FATAL")
+		_ = logging.SetLogLevel("provider.queue", "FATAL")
+
 		mode := viper.GetString("mode")
 		host, dht := GetP2PNode(nil)
 		ctx := context.Background()
