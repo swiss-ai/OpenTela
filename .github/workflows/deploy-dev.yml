@@ -10,7 +10,7 @@ jobs:
         name: Build, Push, and Deploy to Dev
         runs-on: ubuntu-latest
         permissions:
-            contents: read
+            contents: write
             packages: write
 
         steps:
@@ -39,6 +39,19 @@ jobs:
                   mv build/release/entry build/release/otela-amd64
                   GOOS=linux GOARCH=arm64 GIN_MODE=release go build -trimpath -tags "" -ldflags "${LDFLAGS}" -o ./build/release/ ./entry/...
                   mv build/release/entry build/release/otela-arm64
+                  chmod +x build/release/otela-amd64 build/release/otela-arm64
+
+            - name: Update dev-latest release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  gh release delete dev-latest --yes --cleanup-tag 2>/dev/null || true
+                  gh release create dev-latest \
+                    src/build/release/otela-amd64 \
+                    src/build/release/otela-arm64 \
+                    --title "dev-latest (${SHORT_SHA})" \
+                    --notes "Latest dev build from main branch (${SHORT_SHA})" \
+                    --prerelease
 
             - name: Prepare Docker context
               run: |
