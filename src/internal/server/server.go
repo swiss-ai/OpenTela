@@ -88,6 +88,11 @@ func StartServer() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	defer stop()
 
+	// Configure load balancing policy for global service routing
+	lbPolicy := Policy(viper.GetString("lb-policy"))
+	SetLoadBalancerPolicy(lbPolicy)
+	common.Logger.Infof("Load balancing policy: %s", lbPolicy)
+
 	initTracer()
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
