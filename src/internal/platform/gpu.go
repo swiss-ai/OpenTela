@@ -10,8 +10,10 @@ import (
 func GetGPUInfo() []common.GPUSpec {
 	gpus := getNvidiaGPUs()
 	if len(gpus) > 0 {
+		common.Logger.Info("GPU detection: using nvidia-smi, found ", len(gpus), " GPUs")
 		return gpus
 	}
+	common.Logger.Info("GPU detection: nvidia-smi returned nothing, trying rocm-smi")
 	return getAMDGPUs()
 }
 
@@ -49,11 +51,18 @@ func getAMDGPUs() []common.GPUSpec {
 	cmd := exec.Command("rocm-smi", "--showproductname", "--showmeminfo", "vram", "--csv")
 	out, err := cmd.Output()
 	if err != nil {
-		common.Logger.Debug("Error running rocm-smi: ", err, " - (expected if no AMD GPU is present)")
+		common.Logger.Info("rocm-smi failed: ", err)
 		return []common.GPUSpec{}
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	common.Logger.Info("rocm-smi CSV lines: ", len(lines))
+	if len(lines) >= 1 {
+		common.Logger.Info("rocm-smi header: ", lines[0])
+	}
+	if len(lines) >= 2 {
+		common.Logger.Info("rocm-smi row[0]: ", lines[1])
+	}
 	if len(lines) < 2 {
 		return []common.GPUSpec{}
 	}
@@ -64,6 +73,7 @@ func getAMDGPUs() []common.GPUSpec {
 	for i, h := range header {
 		colIdx[strings.TrimSpace(h)] = i
 	}
+	common.Logger.Info("rocm-smi colIdx: ", colIdx)
 
 	var dies []common.GPUSpec
 	for _, line := range lines[1:] {
@@ -77,8 +87,10 @@ func getAMDGPUs() []common.GPUSpec {
 			name = csvField(fields, colIdx, "Card model")
 		}
 		if name == "" {
+			common.Logger.Info("rocm-smi: skipping row, no name found. fields=", fields)
 			continue
 		}
+		common.Logger.Info("rocm-smi: parsed GPU name=", name)
 
 		var total, used int64
 		if v := csvField(fields, colIdx, "VRAM Total Memory (B)"); v != "" {
