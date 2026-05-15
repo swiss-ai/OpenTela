@@ -143,8 +143,12 @@ func newHost(ctx context.Context, seed int64, ds datastore.Batching) (host.Host,
 	host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(n network.Network, c network.Conn) {
 			common.Logger.Debug("Connected to peer: ", c.RemotePeer(), " Total connections: ", len(n.Conns()))
-			// On (re)connections, re-announce local services
-			go ReannounceLocalServices()
+			// Only re-announce if RegisterLocalServices has already run;
+			// an empty snapshot would publish a no-services entry that
+			// races with the real one and takes time to overwrite.
+			if len(snapshotLocalServices()) > 0 {
+				go ReannounceLocalServices()
+			}
 
 			// Mark peer as connected in node table immediately
 			go func(pid peer.ID) {

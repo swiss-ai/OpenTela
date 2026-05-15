@@ -102,6 +102,12 @@ func GetCRDTStore() (*crdt.Datastore, context.CancelFunc) {
 		opts := crdt.DefaultOptions()
 		opts.Logger = common.Logger
 		opts.RebroadcastInterval = 5 * time.Second
+		// Process incoming heads concurrently so one slow bitswap fetch
+		// (e.g. a NAT'd peer) does not stall the entire receive loop.
+		opts.MultiHeadProcessing = true
+		// 30 s is enough for a healthy bitswap session; anything longer just
+		// delays the next rebroadcast-driven retry without helping recovery.
+		opts.DAGSyncerTimeout = 30 * time.Second
 		opts.PutHook = func(k ds.Key, v []byte) {
 			var peer Peer
 			err := json.Unmarshal(v, &peer)
