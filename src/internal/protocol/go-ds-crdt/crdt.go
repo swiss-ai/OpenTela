@@ -192,6 +192,10 @@ type Datastore struct {
 	// keep track of children to be fetched so only one job does every
 	// child
 	queuedChildren *cidSafeSet
+
+	// multiHeadSem bounds the number of concurrent processHead goroutines
+	// when MultiHeadProcessing is enabled; nil when disabled.
+	multiHeadSem chan struct{}
 }
 
 type dagJob struct {
@@ -287,6 +291,9 @@ func New(
 		sendJobs:       make(chan *dagJob),
 		queuedChildren: newCidSafeSet(),
 	}
+	if opts.MultiHeadProcessing {
+		dstore.multiHeadSem = make(chan struct{}, opts.NumWorkers)
+	}
 
 	err = dstore.applyMigrations(ctx)
 	if err != nil {
@@ -368,8 +375,9 @@ func (store *Datastore) handleNext(ctx context.Context) {
 		}
 
 		processHead := func(ctx context.Context, c cid.Cid) {
-			err = store.handleBlock(ctx, c) //handleBlock blocks
-			if err != nil {
+			// Use a function-local variable to avoid a data race when
+			// MultiHeadProcessing launches this closure concurrently.
+			if err := store.handleBlock(ctx, c); err != nil { //handleBlock blocks
 				store.logger.Errorf("error processing new head: %s", err)
 				// For posterity: do not mark the store as
 				// Dirty if we could not handle a block. If an
@@ -412,7 +420,19 @@ func (store *Datastore) handleNext(ctx context.Context) {
 			// the same broadcast in parallel, but do not process
 			// heads from multiple broadcasts in parallel.
 			if store.opts.MultiHeadProcessing {
-				go processHead(ctx, head)
+				// Acquire a semaphore slot before spawning so the
+				// number of live processHead goroutines is bounded
+				// by opts.NumWorkers, preventing unbounded growth
+				// from a broadcast with many heads.
+				select {
+				case store.multiHeadSem <- struct{}{}:
+				case <-ctx.Done():
+					return
+				}
+				go func(c cid.Cid) {
+					defer func() { <-store.multiHeadSem }()
+					processHead(ctx, c)
+				}(head)
 			} else {
 				processHead(ctx, head)
 			}
