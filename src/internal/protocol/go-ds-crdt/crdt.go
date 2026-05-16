@@ -109,6 +109,15 @@ type Options struct {
 	// branching is not necessarily a bad thing and may improve
 	// throughput, but everything depends on usage.
 	MultiHeadProcessing bool
+	// MaxFetchFailures is the number of fetch failures (per CID) after
+	// which the auto-ban mechanism may declare a CID permanently
+	// unreachable. Set to 0 (default) to disable auto-ban.
+	MaxFetchFailures int
+	// MinFetchFailureAge is the minimum time since the first observed
+	// failure for a CID before it can be promoted to banned. Combined
+	// with MaxFetchFailures, this prevents transient outages from
+	// triggering permanent bans on otherwise-valid CIDs.
+	MinFetchFailureAge time.Duration
 }
 
 func (opts *Options) verify() error {
@@ -196,6 +205,11 @@ type Datastore struct {
 	// multiHeadSem bounds the number of concurrent processHead goroutines
 	// when MultiHeadProcessing is enabled; nil when disabled.
 	multiHeadSem chan struct{}
+
+	// autoBan tracks repeated fetch failures and persistently bans CIDs
+	// that are declared unreachable. Always non-nil; a disabled auto-ban
+	// turns all methods into no-ops.
+	autoBan *autoBan
 }
 
 type dagJob struct {
@@ -294,6 +308,10 @@ func New(
 	if opts.MultiHeadProcessing {
 		dstore.multiHeadSem = make(chan struct{}, opts.NumWorkers)
 	}
+	dstore.autoBan = newAutoBan(opts, namespace, store)
+	if err := dstore.autoBan.loadFromStore(ctx); err != nil {
+		opts.Logger.Warnf("autoban: load failed: %s", err)
+	}
 
 	err = dstore.applyMigrations(ctx)
 	if err != nil {
@@ -387,7 +405,10 @@ func (store *Datastore) handleNext(ctx context.Context) {
 				// half-processed and there's nothign to
 				// recover.
 				// disabled: store.MarkDirty()
+				store.autoBan.recordFailure(ctx, c)
+				return
 			}
+			store.autoBan.clearFailure(c)
 		}
 
 		// if we have no heads, make seen-heads heads immediately.  On
@@ -556,6 +577,10 @@ func (store *Datastore) rebroadcastHeads(ctx context.Context) {
 	{
 		headsToBroadcast = make([]cid.Cid, 0, len(store.seenHeads))
 		for _, h := range heads {
+			// Don't keep spreading orphan heads we've decided are unfetchable.
+			if store.autoBan.isBanned(h) {
+				continue
+			}
 			if _, ok := store.seenHeads[h]; !ok {
 				headsToBroadcast = append(headsToBroadcast, h)
 			}
@@ -603,6 +628,11 @@ func (store *Datastore) logStats(ctx context.Context) {
 // handleBlock takes care of vetting, retrieving and applying
 // CRDT blocks to the Datastore.
 func (store *Datastore) handleBlock(ctx context.Context, c cid.Cid) error {
+	// Skip CIDs that auto-ban has declared permanently unreachable.
+	if store.autoBan.isBanned(c) {
+		store.logger.Debugf("skipping banned cid %s", c)
+		return nil
+	}
 	// Ignore already processed blocks.
 	// This includes the case when the block is a current
 	// head.
@@ -932,6 +962,11 @@ func (store *Datastore) repairDAG(ctx context.Context) error {
 	var nodes []nodeHead
 	queued := cid.NewSet()
 	for _, h := range heads {
+		// Banned heads are unreachable by definition; including them
+		// would make repair fail and leave the store stuck dirty.
+		if store.autoBan.isBanned(h) {
+			continue
+		}
 		nodes = append(nodes, nodeHead{head: h, node: h})
 		queued.Add(h)
 	}
@@ -1003,6 +1038,9 @@ func (store *Datastore) repairDAG(ctx context.Context) error {
 		}
 		links := n.Links()
 		for _, l := range links {
+			if store.autoBan.isBanned(l.Cid) {
+				continue
+			}
 			if queued.Visit(l.Cid) {
 				nodes = append(nodes, (nodeHead{head: head, node: l.Cid}))
 			}
