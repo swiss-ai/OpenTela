@@ -149,6 +149,14 @@ func (opts *Options) verify() error {
 		return errors.New("invalid RepairInterval")
 	}
 
+	if opts.MaxFetchFailures < 0 {
+		return errors.New("invalid MaxFetchFailures")
+	}
+
+	if opts.MaxFetchFailures > 0 && opts.MinFetchFailureAge <= 0 {
+		return errors.New("MinFetchFailureAge must be > 0 when MaxFetchFailures is set")
+	}
+
 	return nil
 }
 
@@ -423,9 +431,17 @@ func (store *Datastore) handleNext(ctx context.Context) {
 		if curHeadCount == 0 {
 			dg := &crdtNodeGetter{NodeGetter: store.dagService}
 			for _, head := range bCastHeads {
+				// Banned heads must be skipped here too — otherwise a
+				// freshly-started node with no heads yet would keep
+				// retrying an orphan forever, since this path runs
+				// before processHead and never promotes failures.
+				if store.autoBan.isBanned(head) {
+					continue
+				}
 				prio, err := dg.GetPriority(ctx, head)
 				if err != nil {
 					store.logger.Error(err)
+					store.autoBan.recordFailure(ctx, head)
 					continue
 				}
 				err = store.heads.Add(ctx, head, prio)

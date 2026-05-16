@@ -63,6 +63,7 @@ func (p *pipeBroadcaster) Next(ctx context.Context) ([]byte, error) {
 type firstBlockerDAG struct {
 	ipld.DAGService
 	gate     chan struct{}
+	latched  chan struct{} // closed when the first armed CID is observed
 	released sync.Once
 
 	mu    sync.Mutex
@@ -72,7 +73,11 @@ type firstBlockerDAG struct {
 }
 
 func newFirstBlockerDAG(base ipld.DAGService) *firstBlockerDAG {
-	return &firstBlockerDAG{DAGService: base, gate: make(chan struct{})}
+	return &firstBlockerDAG{
+		DAGService: base,
+		gate:       make(chan struct{}),
+		latched:    make(chan struct{}),
+	}
 }
 
 func (f *firstBlockerDAG) arm() {
@@ -92,6 +97,7 @@ func (f *firstBlockerDAG) shouldBlock(c cid.Cid) bool {
 	if !f.seen {
 		f.first = c
 		f.seen = true
+		close(f.latched)
 		return true
 	}
 	return f.first.Equals(c)
@@ -228,9 +234,14 @@ func TestMultiHeadProcessing_AvoidsHeadOfLineBlocking(t *testing.T) {
 			if err := writer.Put(ctx, ds.NewKey("first"), []byte("v1")); err != nil {
 				t.Fatalf("first put: %v", err)
 			}
-			// Give the reader a moment to receive the broadcast and latch the
-			// CID before we publish the second one.
-			time.Sleep(200 * time.Millisecond)
+			// Wait deterministically for the reader to begin fetching the
+			// first CID; otherwise on a slow runner the second put could
+			// race ahead and become the latched/blocking CID instead.
+			select {
+			case <-readerDAG.latched:
+			case <-time.After(5 * time.Second):
+				t.Fatal("reader never began fetching the first CID")
+			}
 
 			if err := writer.Put(ctx, ds.NewKey("second"), []byte("v2")); err != nil {
 				t.Fatalf("second put: %v", err)
@@ -289,13 +300,14 @@ func hasUnderPrefix(ctx context.Context, d ds.Datastore, prefix string) (bool, e
 		return false, err
 	}
 	defer res.Close()
-	for entry := range res.Next() {
-		if entry.Error != nil {
-			return false, entry.Error
-		}
-		return true, nil
+	entry, ok := <-res.Next()
+	if !ok {
+		return false, nil
 	}
-	return false, nil
+	if entry.Error != nil {
+		return false, entry.Error
+	}
+	return true, nil
 }
 
 // TestAutoBan_BansPersistentlyUnreachableCID drives a reader whose DAG service

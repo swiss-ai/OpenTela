@@ -68,7 +68,7 @@ func (a *autoBan) bannedKey(c cid.Cid) ds.Key {
 
 // loadFromStore populates the in-memory banned set from prior runs.
 func (a *autoBan) loadFromStore(ctx context.Context) error {
-	if !a.enabled {
+	if a == nil || !a.enabled {
 		return nil
 	}
 	prefix := a.namespace.ChildString(bannedNs).String()
