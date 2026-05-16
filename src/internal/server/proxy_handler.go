@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -200,14 +199,12 @@ func GlobalServiceForwardHandler(c *gin.Context) {
 		return
 	}
 
-	// randomly select one of the candidates
-	// here's where we can implement a load balancing algorithm
-	randomIndex := rand.Intn(len(candidates))
-
-	// Re-construct body for forwarding since we read it
-	// (Already done above: c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)))
-
-	targetPeer := candidates[randomIndex]
+	// Select a candidate using the configured load balancing policy
+	lb := GetLoadBalancer()
+	selectedIndex := lb.Pick(candidates)
+	targetPeer := candidates[selectedIndex]
+	lb.OnRequestStart(targetPeer)
+	defer lb.OnRequestEnd(targetPeer)
 	// replace the request path with the _service path
 	requestPath = "/v1/_service/" + serviceName + requestPath
 
