@@ -125,6 +125,9 @@ func registerLLMService(port string) {
 		Port:          port,
 		IdentityGroup: identityGroup,
 	}
+	// Flip peer-level Status to ready now that healthCheckRemote has passed
+	// and we're about to advertise the model.
+	myself.Status = READY
 	provideService(service)
 }
 
