@@ -46,6 +46,7 @@ func init() {
 	startCmd.Flags().String("public-addr", "", "Public address if you have one (by setting this, you can be a bootstrap node)")
 	startCmd.Flags().String("service.name", "", "Service name")
 	startCmd.Flags().String("service.port", "", "Service port")
+	startCmd.Flags().StringArray("label", nil, "key=value metadata to attach to this peer in the DNT (repeatable, e.g. --label launched_by=$USER)")
 	startCmd.Flags().String("solana.rpc", defaultConfig.Solana.RPC, "Solana RPC endpoint")
 	startCmd.Flags().String("solana.mint", defaultConfig.Solana.Mint, "SPL token mint to verify ownership")
 	startCmd.Flags().Bool("solana.skip_verification", defaultConfig.Solana.SkipVerification, "Skip Solana token ownership verification (use for testing only)")

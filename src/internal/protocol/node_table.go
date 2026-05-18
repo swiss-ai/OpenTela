@@ -7,6 +7,8 @@ import (
 	"opentela/internal/common"
 	"opentela/internal/platform"
 	"opentela/internal/wallet"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +23,8 @@ const (
 	CONNECTED    string = "connected"
 	DISCONNECTED string = "disconnected"
 	LEFT         string = "left"
+	PENDING      string = "pending"
+	READY        string = "ready"
 )
 
 type Service struct {
@@ -48,10 +52,35 @@ type Peer struct {
 	Service           []Service           `json:"service"`
 	LastSeen          int64               `json:"last_seen"`
 	Version           string              `json:"version"`
+	Hostname          string              `json:"hostname"`
+	Labels            map[string]string   `json:"labels,omitempty"`
 	PublicAddress     string              `json:"public_address"`
 	Hardware          common.HardwareSpec `json:"hardware"`
 	Connected         bool                `json:"connected"`
 	Load              []int               `json:"load"`
+}
+
+// parseLabels turns repeated --label key=value entries from viper into a map.
+// Malformed entries (no '=' or empty key) are dropped with a debug log.
+func parseLabels() map[string]string {
+	raw := viper.GetStringSlice("label")
+	if len(raw) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(raw))
+	for _, entry := range raw {
+		k, v, ok := strings.Cut(entry, "=")
+		k = strings.TrimSpace(k)
+		if !ok || k == "" {
+			common.Logger.Debugf("ignoring malformed label %q (expected key=value)", entry)
+			continue
+		}
+		out[k] = v
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 type PeerWithStatus struct {
@@ -253,11 +282,16 @@ func InitializeMyself(ownerOverride string) {
 	ctx := context.Background()
 	store, _ := GetCRDTStore()
 	key := ds.NewKey(host.ID().String())
+	hn, _ := os.Hostname()
 	myself = Peer{
 		ID:            host.ID().String(),
 		PublicAddress: viper.GetString("public-addr"),
 		LastSeen:      time.Now().Unix(),
 		Connected:     true,
+		Status:        PENDING,
+		Version:       Version,
+		Hostname:      hn,
+		Labels:        parseLabels(),
 	}
 
 	// Add wallet address as provider if available
