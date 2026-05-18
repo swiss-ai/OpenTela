@@ -571,7 +571,7 @@ func InitializeMyself(walletPubkeyOverride string, wm *wallet.WalletManager) {
 		LastSeen:      time.Now().Unix(),
 		Connected:     true,
 		Status:        PENDING,
-		Version:       Version,
+		Version:       common.JSONVersion.Version,
 		Hostname:      hn,
 		Labels:        parseLabels(),
 	}
