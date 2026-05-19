@@ -1,0 +1,91 @@
+name: Publish binaries to CSCS
+
+# Fetches otela-amd64 / otela-arm64 from a GitHub release and uploads them to
+# /capstor/store/cscs/swissai/infra01/ocf-share via FirecREST.
+#
+# The happy-path mirroring already runs inline at the end of release.yml /
+# deploy-dev.yml. This workflow exists for manual retries (or for re-mirroring
+# an older release) — trigger from the Actions tab with a release tag.
+
+on:
+    workflow_dispatch:
+        inputs:
+            release_tag:
+                description: "Release tag to mirror (e.g. sai-v0.1.0, dev-latest)"
+                required: true
+                type: string
+
+jobs:
+    publish:
+        name: Mirror release ${{ inputs.release_tag }} to CSCS ocf-share
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        env:
+            RELEASE_TAG: ${{ inputs.release_tag }}
+            SML_FIRECREST_CLIENT_ID: ${{ secrets.SML_FIRECREST_CLIENT_ID }}
+            SML_FIRECREST_CLIENT_SECRET: ${{ secrets.SML_FIRECREST_CLIENT_SECRET }}
+            SML_FIRECREST_TOKEN_URI: ${{ secrets.SML_FIRECREST_TOKEN_URI }}
+            SML_FIRECREST_URL: ${{ secrets.SML_FIRECREST_URL }}
+            SML_FIRECREST_SYSTEM: ${{ secrets.SML_FIRECREST_SYSTEM }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Resolve commit SHA for tag
+              id: meta
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  OBJ_TYPE=$(gh api "repos/${{ github.repository }}/git/ref/tags/${RELEASE_TAG}" --jq '.object.type')
+                  SHA=$(gh api "repos/${{ github.repository }}/git/ref/tags/${RELEASE_TAG}" --jq '.object.sha')
+                  if [ "$OBJ_TYPE" = "tag" ]; then
+                      SHA=$(gh api "repos/${{ github.repository }}/git/tags/${SHA}" --jq '.object.sha')
+                  fi
+                  SHORT_SHA=$(printf "%s" "$SHA" | cut -c1-7)
+                  echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+                  echo "Resolved ${RELEASE_TAG} -> ${SHORT_SHA}"
+
+            - name: Download release assets
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  mkdir -p release-assets
+                  gh release download "${RELEASE_TAG}" \
+                      --repo "${{ github.repository }}" \
+                      --pattern 'otela-amd64' \
+                      --pattern 'otela-arm64' \
+                      --dir release-assets
+                  ls -la release-assets
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install pyfirecrest
+              run: pip install --upgrade 'pyfirecrest>=3.7.1'
+
+            - name: Upload to CSCS via FirecREST
+              run: |
+                  SHORT_SHA="${{ steps.meta.outputs.short_sha }}"
+                  # dev-latest mirrors into ocf-share/dev; tagged releases go to ocf-share/prod.
+                  if [ "${RELEASE_TAG}" = "dev-latest" ]; then
+                      REMOTE_DIR=/capstor/store/cscs/swissai/infra01/ocf-share/dev
+                  else
+                      REMOTE_DIR=/capstor/store/cscs/swissai/infra01/ocf-share/prod
+                  fi
+                  python .github/scripts/upload_to_cscs.py \
+                      --remote-dir "${REMOTE_DIR}" \
+                      --symlink "otela-amd64-${RELEASE_TAG}-${SHORT_SHA}:otela-amd64" \
+                      --symlink "otela-arm64-${RELEASE_TAG}-${SHORT_SHA}:otela-arm64" \
+                      "release-assets/otela-amd64:otela-amd64-${RELEASE_TAG}-${SHORT_SHA}" \
+                      "release-assets/otela-arm64:otela-arm64-${RELEASE_TAG}-${SHORT_SHA}"
+
+                  # On prod releases, also reset dev/otela-<arch> to follow this prod build.
+                  if [ "${RELEASE_TAG}" != "dev-latest" ]; then
+                      python .github/scripts/upload_to_cscs.py \
+                          --remote-dir /capstor/store/cscs/swissai/infra01/ocf-share/dev \
+                          --symlink "../prod/otela-amd64-${RELEASE_TAG}-${SHORT_SHA}:otela-amd64" \
+                          --symlink "../prod/otela-arm64-${RELEASE_TAG}-${SHORT_SHA}:otela-arm64"
+                  fi
