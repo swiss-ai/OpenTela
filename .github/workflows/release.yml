@@ -112,3 +112,41 @@ jobs:
                   git config user.email "github-actions[bot]@users.noreply.github.com"
                   git add serving-otela/prod/deployment.yaml
                   git diff --cached --quiet || git commit -m "Deploy otela prod ${{ env.RELEASE_TAG }}" && git push
+
+            - name: Set up Python (for FirecREST upload)
+              if: env.SML_FIRECREST_CLIENT_ID != ''
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+              env:
+                  SML_FIRECREST_CLIENT_ID: ${{ secrets.SML_FIRECREST_CLIENT_ID }}
+
+            - name: Install pyfirecrest
+              if: env.SML_FIRECREST_CLIENT_ID != ''
+              run: pip install --upgrade 'pyfirecrest>=3.7.1'
+              env:
+                  SML_FIRECREST_CLIENT_ID: ${{ secrets.SML_FIRECREST_CLIENT_ID }}
+
+            - name: Publish binaries to CSCS ocf-share via FirecREST
+              if: env.SML_FIRECREST_CLIENT_ID != ''
+              env:
+                  SML_FIRECREST_CLIENT_ID: ${{ secrets.SML_FIRECREST_CLIENT_ID }}
+                  SML_FIRECREST_CLIENT_SECRET: ${{ secrets.SML_FIRECREST_CLIENT_SECRET }}
+                  SML_FIRECREST_TOKEN_URI: ${{ secrets.SML_FIRECREST_TOKEN_URI }}
+                  SML_FIRECREST_URL: ${{ secrets.SML_FIRECREST_URL }}
+                  SML_FIRECREST_SYSTEM: ${{ secrets.SML_FIRECREST_SYSTEM }}
+              run: |
+                  # 1. Upload the versioned prod binaries and point prod/otela-<arch> at them.
+                  python .github/scripts/upload_to_cscs.py \
+                      --remote-dir /capstor/store/cscs/swissai/infra01/ocf-share/prod \
+                      --symlink "otela-amd64-${RELEASE_TAG}-${COMMIT_HASH}:otela-amd64" \
+                      --symlink "otela-arm64-${RELEASE_TAG}-${COMMIT_HASH}:otela-arm64" \
+                      "src/build/release/otela-amd64:otela-amd64-${RELEASE_TAG}-${COMMIT_HASH}" \
+                      "src/build/release/otela-arm64:otela-arm64-${RELEASE_TAG}-${COMMIT_HASH}"
+
+                  # 2. Reset dev/otela-<arch> to follow the new prod release. Subsequent
+                  # main pushes will advance dev/ ahead of prod again.
+                  python .github/scripts/upload_to_cscs.py \
+                      --remote-dir /capstor/store/cscs/swissai/infra01/ocf-share/dev \
+                      --symlink "../prod/otela-amd64-${RELEASE_TAG}-${COMMIT_HASH}:otela-amd64" \
+                      --symlink "../prod/otela-arm64-${RELEASE_TAG}-${COMMIT_HASH}:otela-arm64"
