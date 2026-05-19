@@ -23,6 +23,7 @@ if the share is mounted under a different path inside containers).
 import argparse
 import asyncio
 import os
+import posixpath
 import sys
 from pathlib import Path, PurePosixPath
 
@@ -39,11 +40,17 @@ async def _update_symlink(
     target: str,
     link_name: str,
 ) -> None:
-    """Atomically-ish point <remote_dir>/<link_name> at <target> (target is
-    relative to remote_dir). pyfirecrest exposes no `ln -sfn`, so: rm if
-    present, then create. There is a tiny window where the link is missing,
-    which is acceptable for our deploy cadence."""
+    """Point <remote_dir>/<link_name> at <target>. <target> may be absolute
+    or relative to <remote_dir> (relative paths get resolved into an
+    absolute path — FirecREST's symlink endpoint rejects bare/relative
+    source_paths with HTTP 428). pyfirecrest exposes no `ln -sfn`, so we
+    rm-then-symlink; small window where the link is missing is acceptable
+    for our deploy cadence."""
     link_path = str(PurePosixPath(remote_dir) / link_name)
+    if target.startswith("/"):
+        absolute_target = target
+    else:
+        absolute_target = posixpath.normpath(str(PurePosixPath(remote_dir) / target))
     try:
         await client.rm(system_name=system_name, path=link_path, blocking=True)
         print(f"  removed existing {link_path}")
@@ -52,10 +59,10 @@ async def _update_symlink(
         print(f"  no existing {link_path} (ok: {e.__class__.__name__})")
     await client.symlink(
         system_name=system_name,
-        source_path=target,
+        source_path=absolute_target,
         link_path=link_path,
     )
-    print(f"  symlink {link_path} -> {target}")
+    print(f"  symlink {link_path} -> {absolute_target}")
 
 
 async def run(
