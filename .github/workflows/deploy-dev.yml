@@ -96,3 +96,33 @@ jobs:
                   git config user.email "github-actions[bot]@users.noreply.github.com"
                   git add serving-otela/dev/deployment.yaml
                   git diff --cached --quiet || git commit -m "Deploy otela dev dev-${{ env.SHORT_SHA }}" && git push
+
+            - name: Set up Python (for FirecREST upload)
+              if: env.SML_FIRECREST_CLIENT_ID != ''
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+              env:
+                  SML_FIRECREST_CLIENT_ID: ${{ secrets.SML_FIRECREST_CLIENT_ID }}
+
+            - name: Install pyfirecrest
+              if: env.SML_FIRECREST_CLIENT_ID != ''
+              run: pip install --upgrade 'pyfirecrest>=3.7.1'
+              env:
+                  SML_FIRECREST_CLIENT_ID: ${{ secrets.SML_FIRECREST_CLIENT_ID }}
+
+            - name: Publish dev binaries to CSCS ocf-share via FirecREST
+              if: env.SML_FIRECREST_CLIENT_ID != ''
+              env:
+                  SML_FIRECREST_CLIENT_ID: ${{ secrets.SML_FIRECREST_CLIENT_ID }}
+                  SML_FIRECREST_CLIENT_SECRET: ${{ secrets.SML_FIRECREST_CLIENT_SECRET }}
+                  SML_FIRECREST_TOKEN_URI: ${{ secrets.SML_FIRECREST_TOKEN_URI }}
+                  SML_FIRECREST_URL: ${{ secrets.SML_FIRECREST_URL }}
+                  SML_FIRECREST_SYSTEM: ${{ secrets.SML_FIRECREST_SYSTEM }}
+              run: |
+                  python .github/scripts/upload_to_cscs.py \
+                      --remote-dir /capstor/store/cscs/swissai/infra01/ocf-share/dev \
+                      --symlink "otela-amd64-dev-latest-${SHORT_SHA}:otela-amd64" \
+                      --symlink "otela-arm64-dev-latest-${SHORT_SHA}:otela-arm64" \
+                      "src/build/release/otela-amd64:otela-amd64-dev-latest-${SHORT_SHA}" \
+                      "src/build/release/otela-arm64:otela-arm64-dev-latest-${SHORT_SHA}"
