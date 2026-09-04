@@ -31,10 +31,22 @@ jobs:
                   echo "COMMIT_HASH=${SHORT_SHA}" >> $GITHUB_ENV
                   echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
 
+            # Dev builds are signed too: with security.require_signed_binary
+            # enabled, an unsigned dev binary is rejected by its own peers.
+            # Skipped when BUILD_SIGN_KEY is absent, leaving buildSig empty.
+            - name: Sign build attestation
+              if: env.BUILD_SIGN_KEY != ''
+              env:
+                  BUILD_SIGN_KEY: ${{ secrets.BUILD_SIGN_KEY }}
+              run: |
+                  cd src
+                  BUILD_SIG=$(go run ./internal/attestation/cmd/buildsign sign "${VERSION}" "${COMMIT_HASH}" "${BUILD_SIGN_KEY}")
+                  echo "BUILD_SIG=${BUILD_SIG}" >> $GITHUB_ENV
+
             - name: Build binaries
               run: |
                   cd src
-                  LDFLAGS="-X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}"
+                  LDFLAGS="-X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE} -X main.buildSig=${BUILD_SIG}"
                   GOOS=linux GOARCH=amd64 GIN_MODE=release go build -trimpath -tags "" -ldflags "${LDFLAGS}" -o ./build/release/ ./entry/...
                   mv build/release/entry build/release/otela-amd64
                   GOOS=linux GOARCH=arm64 GIN_MODE=release go build -trimpath -tags "" -ldflags "${LDFLAGS}" -o ./build/release/ ./entry/...
