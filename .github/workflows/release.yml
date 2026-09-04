@@ -43,9 +43,19 @@ jobs:
                   echo "BUILD_SIG=${BUILD_SIG}" >> $GITHUB_ENV
 
             - name: Build production binaries
+              env:
+                  BUILD_PUBKEY: ${{ vars.BUILD_PUBKEY }}
               run: |
                   cd src
                   LDFLAGS="-X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE} -X main.buildSig=${BUILD_SIG}"
+                  # Bake our own trust anchor into the binary we just signed, so
+                  # nodes accept our builds without per-node configuration. Only
+                  # when BUILD_PUBKEY is set: an empty -X would leave the binary
+                  # with no usable trust anchor, which with
+                  # security.require_signed_binary enabled partitions the mesh.
+                  if [ -n "${BUILD_PUBKEY}" ]; then
+                      LDFLAGS="${LDFLAGS} -X opentela/internal/attestation.DefaultPubKeyHex=${BUILD_PUBKEY}"
+                  fi
                   GOOS=linux GOARCH=amd64 GIN_MODE=release go build -trimpath -tags "" -ldflags "${LDFLAGS}" -o ./build/release/ ./entry/...
                   mv build/release/entry build/release/otela-amd64
                   GOOS=linux GOARCH=arm64 GIN_MODE=release go build -trimpath -tags "" -ldflags "${LDFLAGS}" -o ./build/release/ ./entry/...
