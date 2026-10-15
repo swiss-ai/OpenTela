@@ -113,10 +113,10 @@ jobs:
               run: |
                   git clone https://x-access-token:${ARGO_PAT}@github.com/breithorn-poc/rob-poc.git /tmp/rob-poc
                   cd /tmp/rob-poc
-                  sed -i "s|image: ghcr.io/swiss-ai/opentela:.*|image: ghcr.io/swiss-ai/opentela:dev-${{ env.SHORT_SHA }}|" serving-otela/dev/deployment.yaml
+                  sed -i "s|image: ghcr.io/swiss-ai/opentela:.*|image: ghcr.io/swiss-ai/opentela:dev-${{ env.SHORT_SHA }}|" swissai-research-platform/serving-otela/dev/deployment.yaml
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git add serving-otela/dev/deployment.yaml
+                  git add swissai-research-platform/serving-otela/dev/deployment.yaml
                   git diff --cached --quiet || git commit -m "Deploy otela dev dev-${{ env.SHORT_SHA }}" && git push
 
             - name: Set up Python (for FirecREST upload)
