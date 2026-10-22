@@ -94,13 +94,28 @@ func registerPingProtocol(h host.Host) {
 	ping.NewPingService(h)
 }
 
-func newHost(ctx context.Context, seed int64, ds datastore.Batching) (host.Host, error) {
-	var err error
-	if err != nil {
-		common.Logger.Error("Error while creating connection manager: ", err)
-	}
+// loadOrCreateIdentity picks the libp2p identity for this node: the
+// process's in-memory EphemeralKey with --ephemeral-identity, otherwise the
+// persisted key file (created from seed, or randomly when seed is 0, on
+// first run).
+func loadOrCreateIdentity(seed int64) (crypto.PrivKey, error) {
 	var priv crypto.PrivKey
-	if seed == 0 {
+	var err error
+	if viper.GetBool(EphemeralIdentityKey) {
+		// A fresh identity for this process only: no key file is read or
+		// written, so nodes sharing a $HOME still get distinct peer IDs.
+		// Takes precedence over --seed.
+		priv, err = EphemeralKey()
+		if err != nil {
+			return nil, err
+		}
+		common.Logger.Info("ephemeral-identity: using a fresh in-memory identity (not persisted)")
+		if viper.GetString("datadir") == "" {
+			// A new peer ID per run means a new ~/.ocfcore/ocfcore.<id>.db per
+			// run, and a node that is killed never removes its own.
+			common.Logger.Warn("ephemeral-identity without --datadir: peer databases of killed nodes accumulate in ~/.ocfcore")
+		}
+	} else if seed == 0 {
 		// seed=0 (default): load existing key from disk for stable identity.
 		// If no key file exists yet, generate a random one and persist it.
 		priv = LoadKeyFromFile()
@@ -127,6 +142,15 @@ func newHost(ctx context.Context, seed int64, ds datastore.Batching) (host.Host,
 			WriteKeyToFile(priv)
 		}
 	}
+	return priv, err
+}
+
+func newHost(ctx context.Context, seed int64, ds datastore.Batching) (host.Host, error) {
+	var err error
+	if err != nil {
+		common.Logger.Error("Error while creating connection manager: ", err)
+	}
+	priv, err := loadOrCreateIdentity(seed)
 	if err != nil {
 		return nil, err
 	}

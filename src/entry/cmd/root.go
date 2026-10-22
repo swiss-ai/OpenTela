@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"opentela/internal/attestation"
 	"opentela/internal/common"
+	"opentela/internal/protocol"
 	"os"
 	"path"
 	"path/filepath"
@@ -51,6 +52,11 @@ func init() {
 		"http://152.67.64.117:8092/v1/dnt/bootstraps",
 	}, "static bootstrap sources (HTTP URL, dnsaddr://, or multiaddr). Repeatable")
 	startCmd.Flags().String("seed", "0", "Seed")
+	// Not bound with viper.BindPFlag: bound keys are written into the cfg.yaml
+	// seeded on first run, and a one-off --ephemeral-identity or a temporary
+	// --datadir must not stick to later runs. initConfig applies them like --seed.
+	startCmd.Flags().Bool(protocol.EphemeralIdentityKey, false, "generate a fresh peer identity for this process only, without reading or writing a key file (overrides --seed)")
+	startCmd.Flags().String("datadir", "", "directory for node data: peer database in <datadir>/ocfcore, usage store in <datadir>/usage (default ~/.ocfcore and ~/.otela)")
 	startCmd.Flags().String("mode", "node", "Mode (standalone, local, full)")
 	startCmd.Flags().String("tcpport", "43905", "TCP Port")
 	startCmd.Flags().String("udpport", "59820", "UDP Port")

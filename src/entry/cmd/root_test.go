@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -10,6 +11,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"opentela/internal/protocol"
 )
 
 func TestRootCommand(t *testing.T) {
@@ -344,4 +347,43 @@ func TestBillingConfigDefaults(t *testing.T) {
 	assert.Equal(t, 10000000, viper.GetInt("billing.value_threshold"), "billing.value_threshold should default to 10000000")
 	assert.Equal(t, 60, viper.GetInt("billing.max_interval_minutes"), "billing.max_interval_minutes should default to 60")
 	assert.Equal(t, 10, viper.GetInt("billing.dispute_threshold_pct"), "billing.dispute_threshold_pct should default to 10")
+}
+
+func TestStartFlagsForSharedHomeAreNotPersisted(t *testing.T) {
+	// The first run seeds cfg.yaml from viper's settings. A one-off
+	// --ephemeral-identity or a temporary --datadir must not end up in it,
+	// or every later `otela start` would silently inherit them.
+	//
+	// Runs in a fresh test process: other tests call viper.Reset, which drops
+	// the flag bindings made in init() — exactly what this test must see.
+	if os.Getenv("OTELA_TEST_PERSIST_CHILD") == "1" {
+		startFlagsNotPersistedChild(t)
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestStartFlagsForSharedHomeAreNotPersisted$", "-test.count=1", "-test.v") // #nosec G204 -- re-runs this test binary
+	cmd.Env = append(os.Environ(), "OTELA_TEST_PERSIST_CHILD=1", "HOME="+t.TempDir())
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "child test failed:\n%s", out)
+	// A child that matched no test also exits 0; make sure it really ran.
+	require.Contains(t, string(out), "--- PASS: TestStartFlagsForSharedHomeAreNotPersisted", "child did not run the test:\n%s", out)
+}
+
+func startFlagsNotPersistedChild(t *testing.T) {
+	tempDir := t.TempDir()
+	viper.Set("config_dir", tempDir)
+	cfgFile = ""
+	dataDir := filepath.Join(tempDir, "node-data")
+	require.NoError(t, startCmd.Flags().Set(protocol.EphemeralIdentityKey, "true"))
+	require.NoError(t, startCmd.Flags().Set("datadir", dataDir))
+
+	require.NoError(t, initConfig(startCmd))
+
+	// This run sees both flags...
+	assert.True(t, viper.GetBool(protocol.EphemeralIdentityKey))
+	assert.Equal(t, dataDir, viper.GetString("datadir"))
+	// ...but the seeded cfg.yaml does not carry them.
+	written, err := os.ReadFile(filepath.Join(tempDir, "cfg.yaml"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(written), "ephemeral")
+	assert.NotContains(t, string(written), dataDir)
 }

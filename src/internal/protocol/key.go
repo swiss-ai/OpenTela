@@ -5,6 +5,7 @@ import (
 	"opentela/internal/common"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/spf13/viper"
@@ -90,4 +91,31 @@ func GenerateAndWriteKey() (crypto.PrivKey, error) {
 	}
 	WriteKeyToFile(priv)
 	return priv, nil
+}
+
+// EphemeralIdentityKey is the viper key (and `otela start` flag) that makes a
+// node use EphemeralKey instead of the persisted key file.
+const EphemeralIdentityKey = "ephemeral-identity"
+
+var (
+	ephemeralKeyMu sync.Mutex
+	ephemeralKey   crypto.PrivKey
+)
+
+// EphemeralKey returns this process's in-memory RSA-2048 libp2p identity,
+// generating it on first use; nothing is read from or written to disk. Nodes
+// that share one $HOME (e.g. the nodes of a multi-node Slurm job) would
+// otherwise all load the same persisted key and announce the same peer ID.
+// Every caller in the process (libp2p host, instance link) gets the same key.
+func EphemeralKey() (crypto.PrivKey, error) {
+	ephemeralKeyMu.Lock()
+	defer ephemeralKeyMu.Unlock()
+	if ephemeralKey == nil {
+		priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		ephemeralKey = priv
+	}
+	return ephemeralKey, nil
 }

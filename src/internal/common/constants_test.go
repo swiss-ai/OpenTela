@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/viper"
 )
 
 func TestGetHomePathCreatesDir(t *testing.T) {
@@ -36,5 +38,21 @@ func TestGetDBPath(t *testing.T) {
 	db := GetDBPath("node123")
 	if !strings.Contains(db, filepath.Join(".ocfcore", "ocfcore.node123.db")) {
 		t.Fatalf("unexpected db path: %s", db)
+	}
+}
+
+func TestGetDBPathHonorsDatadir(t *testing.T) {
+	// A shared $HOME must not collect peer databases: --datadir moves them.
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	dir := t.TempDir()
+	viper.Set("datadir", dir)
+
+	db := GetDBPath("node123")
+	if db != filepath.Join(dir, "ocfcore", "ocfcore.node123.db") {
+		t.Fatalf("unexpected db path: %s", db)
+	}
+	if st, err := os.Stat(filepath.Join(dir, "ocfcore")); err != nil || !st.IsDir() {
+		t.Fatalf("expected directory to be created: %v, %v", st, err)
 	}
 }
