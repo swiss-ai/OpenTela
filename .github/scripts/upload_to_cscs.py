@@ -33,6 +33,22 @@ import firecrest as f7t
 _REMOTE_MODE = "755"
 
 
+def _primary_group_name(user_info: dict) -> str:
+    """Extract the primary group name from a `userinfo` response.
+
+    Pre-2.6.0 FirecREST puts the primary group in a top-level ``group`` field;
+    2.6.0+ drops it and flags the primary group with ``"default": true`` inside
+    ``groups`` instead. Same helper as model-launch (swiss-ai/model-launch#221).
+    """
+    group = user_info.get("group")
+    if group is None:
+        groups = user_info.get("groups") or []
+        group = next((g for g in groups if g.get("default")), groups[0] if groups else None)
+    if group is None:
+        raise RuntimeError("FirecREST userinfo response has no group information")
+    return group["name"]
+
+
 async def _update_symlink(
     client: f7t.v2.AsyncFirecrest,
     system_name: str,
@@ -81,7 +97,7 @@ async def run(
     system_name = os.environ["SML_FIRECREST_SYSTEM"]
 
     user_info = await client.userinfo(system_name)
-    account = user_info["group"]["name"]
+    account = _primary_group_name(user_info)
 
     # mkdir -p the destination so this works the first time a new
     # (e.g. ocf-share/dev or ocf-share/prod) subdir is used.
