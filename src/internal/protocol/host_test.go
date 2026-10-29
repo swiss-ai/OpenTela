@@ -3,10 +3,12 @@ package protocol
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
 )
@@ -322,5 +324,20 @@ func TestAppendUniqueMultiaddrs(t *testing.T) {
 	if assert.Len(t, got, 2) {
 		assert.Equal(t, "/ip4/10.0.0.1/tcp/43905", got[0].String())
 		assert.Equal(t, "/ip4/148.187.108.172/tcp/43905", got[1].String())
+	}
+}
+
+// Many peers behind one NAT / SNAT address must all be able to connect;
+// libp2p's default per-IP limiter would refuse everything past the 8th.
+func TestResourceManagerAllowsManyConnsFromOneIP(t *testing.T) {
+	rm := newResourceManager()
+	defer rm.Close()
+	for i := 0; i < 64; i++ {
+		addr := multiaddr.StringCast(fmt.Sprintf("/ip4/10.0.0.1/tcp/%d", 40000+i))
+		scope, err := rm.OpenConnection(network.DirInbound, true, addr)
+		if !assert.NoError(t, err, "connection %d from one IP refused", i+1) {
+			return
+		}
+		defer scope.Done()
 	}
 }
