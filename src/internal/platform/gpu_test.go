@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"opentela/internal/common"
 	"os/exec"
 	"testing"
 )
@@ -97,6 +98,41 @@ func TestNvidiaUnknownFiltering(t *testing.T) {
 	for _, gpu := range result {
 		if gpu.Name == "unknown" || gpu.Name == "[Unknown Error]" || gpu.Name == "N/A" {
 			t.Errorf("GPU name should not be %q after filtering", gpu.Name)
+		}
+	}
+}
+
+// A failed probe (empty result) must not wipe GPUs already known; a successful
+// probe still refreshes them (used memory changes while a model runs).
+func TestGetGPUInfoKeepsLastKnownOnEmptyProbe(t *testing.T) {
+	orig := probeGPUs
+	defer func() { probeGPUs = orig; lastGPUs = nil }()
+	lastGPUs = nil
+
+	results := [][]common.GPUSpec{
+		{},
+		{{Name: "MI300A", TotalMemory: 100, UsedMemory: 1}},
+		{},
+		{{Name: "MI300A", TotalMemory: 100, UsedMemory: 7}},
+		{},
+	}
+	call := 0
+	probeGPUs = func() []common.GPUSpec { r := results[call]; call++; return r }
+
+	want := []int64{-1, 1, 1, 7, 7} // -1: no GPUs known yet
+	for i, w := range want {
+		got := GetGPUInfo()
+		if got == nil {
+			t.Fatalf("call %d: nil slice", i)
+		}
+		if w == -1 {
+			if len(got) != 0 {
+				t.Fatalf("call %d: want no GPUs, got %+v", i, got)
+			}
+			continue
+		}
+		if len(got) != 1 || got[0].UsedMemory != w {
+			t.Fatalf("call %d: want 1 GPU with used=%d, got %+v", i, w, got)
 		}
 	}
 }

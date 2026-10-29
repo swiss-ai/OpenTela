@@ -1,22 +1,57 @@
 package platform
 
 import (
+	"context"
 	"opentela/internal/common"
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
+// smiTimeout bounds one nvidia-smi / rocm-smi call so a hung tool can't stall
+// the reannounce path that calls GetGPUInfo.
+const smiTimeout = 15 * time.Second
+
+var (
+	gpuMu    sync.Mutex
+	lastGPUs []common.GPUSpec
+	// probeGPUs is swapped out in tests.
+	probeGPUs = func() []common.GPUSpec {
+		gpus := getNvidiaGPUs()
+		if len(gpus) > 0 {
+			return gpus
+		}
+		return getAMDGPUs()
+	}
+)
+
+// GetGPUInfo probes the GPUs. It is called on every reannounce (each new
+// connection, relay reservation, service health flip), not just at startup,
+// so a single failed probe -- e.g. rocm-smi under contention when many peers
+// share a node -- used to replace the advertised GPUs with an empty list. A
+// node's GPUs don't disappear while it runs, so an empty result never
+// overwrites the last non-empty one; used memory stays fresh on success.
 func GetGPUInfo() []common.GPUSpec {
-	gpus := getNvidiaGPUs()
+	gpuMu.Lock()
+	defer gpuMu.Unlock()
+	gpus := probeGPUs()
 	if len(gpus) > 0 {
+		lastGPUs = gpus
 		return gpus
 	}
-	return getAMDGPUs()
+	if len(lastGPUs) > 0 {
+		common.Logger.Debug("GPU probe returned nothing; keeping the last known GPUs")
+		return append([]common.GPUSpec(nil), lastGPUs...)
+	}
+	return gpus
 }
 
 func getNvidiaGPUs() []common.GPUSpec {
-	cmd := exec.Command("nvidia-smi", "--query-gpu=name,memory.total,memory.used", "--format=csv,noheader,nounits")
+	ctx, cancel := context.WithTimeout(context.Background(), smiTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "nvidia-smi", "--query-gpu=name,memory.total,memory.used", "--format=csv,noheader,nounits")
 	out, err := cmd.Output()
 	if err != nil {
 		common.Logger.Debug("nvidia-smi unavailable: ", err)
@@ -46,7 +81,9 @@ func getNvidiaGPUs() []common.GPUSpec {
 }
 
 func getAMDGPUs() []common.GPUSpec {
-	cmd := exec.Command("rocm-smi", "--showproductname", "--showmeminfo", "vram", "--csv")
+	ctx, cancel := context.WithTimeout(context.Background(), smiTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "rocm-smi", "--showproductname", "--showmeminfo", "vram", "--csv")
 	out, err := cmd.Output()
 	if err != nil {
 		common.Logger.Debug("Error running rocm-smi: ", err, " - (expected if no AMD GPU is present)")
