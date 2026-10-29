@@ -23,7 +23,12 @@ var (
 		if len(gpus) > 0 {
 			return gpus
 		}
-		return getAMDGPUs()
+		if gpus = getAMDGPUs(); len(gpus) > 0 {
+			return gpus
+		}
+		// Newer ROCm images (e.g. the rocm/vllm build model-launch uses on
+		// Beverin) ship only amd-smi, rocm-smi's replacement.
+		return getAMDSMIGPUs()
 	}
 )
 
