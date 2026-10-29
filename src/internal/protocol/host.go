@@ -42,6 +42,7 @@ import (
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
+	"github.com/libp2p/go-libp2p/x/rate"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/spf13/viper"
 )
@@ -60,6 +61,8 @@ var holePunchService *holepunch.Service
 
 const (
 	Version = "0.0.0-dev.0"
+	// maxConnsPerIP bounds connections from a single source IP (see newResourceManager).
+	maxConnsPerIP = 4096
 )
 
 func GetP2PNode(ds datastore.Batching) (host.Host, dualdht.DHT) {
@@ -364,6 +367,9 @@ func StartAutoReconnect(ctx context.Context) {
 	autoReconnectOnce.Do(func() {
 		host, _ := GetP2PNode(nil)
 		go startAutoReconnect(ctx, host)
+		if viper.GetString("public-addr") == "" {
+			go startConnectivityWatchdog(ctx, host)
+		}
 	})
 }
 
@@ -570,8 +576,19 @@ func newResourceManager() network.ResourceManager {
 	// DefaultLimits.AutoScale() refuses concurrent outbound streams once a
 	// single peer-protocol pair has ~128 in flight, which 502s legitimate
 	// head→worker forwarding at moderate RPS on slow models.
+	//
+	// InfiniteLimits does not cover the per-IP connection limiter, which
+	// defaults to 8 conns per IPv4 address plus 0.2 new conns/s per address.
+	// Compute-node peers reach the bootstrap through NAT / kube-proxy SNAT, so
+	// many share one source IP and everything past the 8th was refused.
 	limiter := rcmgr.NewFixedLimiter(rcmgr.InfiniteLimits)
-	rm, err := rcmgr.NewResourceManager(limiter)
+	rm, err := rcmgr.NewResourceManager(limiter,
+		rcmgr.WithLimitPerSubnet(
+			[]rcmgr.ConnLimitPerSubnet{{PrefixLength: 32, ConnCount: maxConnsPerIP}},
+			[]rcmgr.ConnLimitPerSubnet{{PrefixLength: 56, ConnCount: maxConnsPerIP}},
+		),
+		rcmgr.WithConnRateLimiters(&rate.Limiter{}), // zero limits = unlimited
+	)
 	if err != nil {
 		common.Logger.Errorf("Failed to create resource manager, falling back to null (NO RESOURCE LIMITS): %v", err)
 		return &network.NullResourceManager{}
@@ -770,11 +787,12 @@ func MakeRelayReservations() {
 		}
 		ai := peer.AddrInfo{ID: p, Addrs: h.Peerstore().Addrs(p)}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		_, err := relayClient.Reserve(ctx, h, ai)
+		rsvp, err := relayClient.Reserve(ctx, h, ai)
 		cancel()
 		if err != nil {
 			common.Logger.Debugf("Relay reservation on %s failed: %v", p.String()[:12], err)
 		} else {
+			setRelayReservation(rsvp.Expiration)
 			common.Logger.Infof("Relay reservation on %s succeeded", p.String()[:12])
 			if reservedRelay == "" {
 				reservedRelay = p.String()
