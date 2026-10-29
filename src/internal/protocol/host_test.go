@@ -341,3 +341,12 @@ func TestResourceManagerAllowsManyConnsFromOneIP(t *testing.T) {
 		defer scope.Done()
 	}
 }
+
+// Relay reservations must not be capped below the per-IP connection limit:
+// with MaxReservationsPerIP=64, a node running 100 workers left 36 unreserved.
+func TestRelayResourcesMatchPerIPConnLimit(t *testing.T) {
+	r := relayServiceResources()
+	assert.GreaterOrEqual(t, r.MaxReservationsPerIP, maxConnsPerIP)
+	assert.GreaterOrEqual(t, r.MaxReservationsPerASN, maxConnsPerIP)
+	assert.GreaterOrEqual(t, r.MaxReservations, maxConnsPerIP)
+}

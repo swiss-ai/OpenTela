@@ -564,10 +564,14 @@ func bigWindowYamuxMuxer() *libp2pyamux.Transport {
 
 func relayServiceResources() relayv2.Resources {
 	r := relayv2.DefaultResources()
-	r.MaxReservations = 512
+	// Workers behind NAT / SNAT share a source IP (and ASN), so the per-IP
+	// and per-ASN caps must allow as many reservations as maxConnsPerIP
+	// allows connections; at 64 per IP the 65th peer on one node never got
+	// one and its watchdog retried forever.
+	r.MaxReservations = maxConnsPerIP
 	r.MaxCircuits = 128
-	r.MaxReservationsPerIP = 64
-	r.MaxReservationsPerASN = 256
+	r.MaxReservationsPerIP = maxConnsPerIP
+	r.MaxReservationsPerASN = maxConnsPerIP
 	return r
 }
 
