@@ -94,7 +94,10 @@ func getAMDGPUs() []common.GPUSpec {
 		common.Logger.Debug("Error running rocm-smi: ", err, " - (expected if no AMD GPU is present)")
 		return []common.GPUSpec{}
 	}
+	return parseROCmSMI(out)
+}
 
+func parseROCmSMI(out []byte) []common.GPUSpec {
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	if len(lines) < 2 {
 		return []common.GPUSpec{}
@@ -111,12 +114,11 @@ func getAMDGPUs() []common.GPUSpec {
 	for _, line := range lines[1:] {
 		fields := strings.Split(line, ",")
 
-		name := csvField(fields, colIdx, "Card series")
+		// Images without a PCI-ID database report the series as "N/A" and
+		// the model as the bare device ID (MI300A: 0x74a0).
+		name := knownValue(csvField(fields, colIdx, "Card series"), csvField(fields, colIdx, "Card Series"))
 		if name == "" {
-			name = csvField(fields, colIdx, "Card Series")
-		}
-		if name == "" {
-			name = csvField(fields, colIdx, "Card model")
+			name = amdNameFromID(knownValue(csvField(fields, colIdx, "Card model"), csvField(fields, colIdx, "Card Model")))
 		}
 		if name == "" {
 			continue

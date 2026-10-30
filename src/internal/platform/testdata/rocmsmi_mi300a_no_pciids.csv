@@ -1,0 +1,5 @@
+device,VRAM Total Memory (B),VRAM Total Used Memory (B),Card Series,Card Model,Card Vendor,Card SKU,Subsystem ID,Device Rev,Node ID,GUID,GFX Version
+card0,137438953472,32620544,N/A,0x74a0,Advanced Micro Devices Inc. [AMD/ATI],N/A,0x74a0,0x00,4,47157,gfx942
+card1,137438953472,32620544,N/A,0x74a0,Advanced Micro Devices Inc. [AMD/ATI],N/A,0x74a0,0x00,5,11624,gfx942
+card2,137438953472,32620544,N/A,0x74a0,Advanced Micro Devices Inc. [AMD/ATI],N/A,0x74a0,0x00,6,53900,gfx942
+card3,137438953472,32620544,N/A,0x74a0,Advanced Micro Devices Inc. [AMD/ATI],N/A,0x74a0,0x00,7,18385,gfx942

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os/exec"
+	"strings"
 
 	"opentela/internal/common"
 )
@@ -26,6 +27,7 @@ type amdSMIGPU struct {
 	GPU  int `json:"gpu"`
 	ASIC struct {
 		MarketName string `json:"market_name"`
+		DeviceID   string `json:"device_id"`
 	} `json:"asic"`
 	Board struct {
 		ProductSerial string `json:"product_serial"`
@@ -71,16 +73,20 @@ func parseAMDSMI(static, usage []byte) []common.GPUSpec {
 	}
 	bySerial := map[string]int{} // board serial -> index in gpus
 	for _, g := range names {
-		if g.ASIC.MarketName == "" || g.ASIC.MarketName == "N/A" {
+		name := knownValue(g.ASIC.MarketName)
+		if name == "" {
+			name = amdNameFromID(knownValue(g.ASIC.DeviceID))
+		}
+		if name == "" {
 			continue
 		}
-		spec := common.GPUSpec{Name: g.ASIC.MarketName}
+		spec := common.GPUSpec{Name: name}
 		if u, ok := mem[g.GPU]; ok {
 			spec.TotalMemory = toMiB(u.MemUsage.TotalVRAM)
 			spec.UsedMemory = toMiB(u.MemUsage.UsedVRAM)
 		}
-		serial := g.Board.ProductSerial
-		if serial == "" || serial == "N/A" {
+		serial := knownValue(g.Board.ProductSerial)
+		if serial == "" {
 			gpus = append(gpus, spec)
 			continue
 		}
@@ -120,4 +126,42 @@ func toMiB(v amdSMIValue) int64 {
 	default: // "MB"
 		return int64(v.Value)
 	}
+}
+
+// amdDeviceNames maps PCI device IDs to product names for images whose
+// rocm-smi / amd-smi lack a PCI-ID database and report the name as "N/A".
+var amdDeviceNames = map[string]string{
+	"0x738c": "AMD Instinct MI100",
+	"0x7408": "AMD Instinct MI250X",
+	"0x740c": "AMD Instinct MI250X/MI250",
+	"0x740f": "AMD Instinct MI210",
+	"0x74a0": "AMD Instinct MI300A",
+	"0x74a1": "AMD Instinct MI300X",
+	"0x74a5": "AMD Instinct MI325X",
+}
+
+// amdNameFromID names a GPU from its device ID ("0x74a0"); an ID missing from
+// the table still advertises the GPU, and a value that isn't an ID is kept.
+func amdNameFromID(id string) string {
+	if id == "" {
+		return ""
+	}
+	if name, ok := amdDeviceNames[strings.ToLower(id)]; ok {
+		return name
+	}
+	if strings.HasPrefix(strings.ToLower(id), "0x") {
+		return "AMD GPU " + id
+	}
+	return id
+}
+
+// knownValue returns the first value that is set, skipping the tools'
+// "N/A" placeholder.
+func knownValue(vs ...string) string {
+	for _, v := range vs {
+		if v = strings.TrimSpace(v); v != "" && !strings.EqualFold(v, "N/A") {
+			return v
+		}
+	}
+	return ""
 }

@@ -81,3 +81,50 @@ func TestToMiB(t *testing.T) {
 		}
 	}
 }
+
+// Images without a PCI-ID database (Mel's vllm_apertus2_rocm on Beverin mi300)
+// report every name and the board serial as "N/A", leaving only the device ID.
+func TestNamesFromDeviceIDWhenToolsReportNA(t *testing.T) {
+	static, err := os.ReadFile("testdata/amdsmi_static_mi300a_no_pciids.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gpus := parseAMDSMI(static, nil)
+	if len(gpus) != 4 {
+		t.Fatalf("amd-smi: want 4 GPUs (N/A serials must not merge), got %+v", gpus)
+	}
+	for _, g := range gpus {
+		if g.Name != "AMD Instinct MI300A" {
+			t.Fatalf("amd-smi: unexpected GPU %+v", g)
+		}
+	}
+
+	csv, err := os.ReadFile("testdata/rocmsmi_mi300a_no_pciids.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gpus = parseROCmSMI(csv)
+	if len(gpus) != 4 {
+		t.Fatalf("rocm-smi: want 4 GPUs, got %+v", gpus)
+	}
+	for _, g := range gpus {
+		if g.Name != "AMD Instinct MI300A" || g.TotalMemory != 131072 || g.UsedMemory != 31 {
+			t.Fatalf("rocm-smi: unexpected GPU %+v", g)
+		}
+	}
+}
+
+func TestAMDNameFromID(t *testing.T) {
+	cases := map[string]string{
+		"0x74a0":              "AMD Instinct MI300A",
+		"0x74A0":              "AMD Instinct MI300A",
+		"0x1234":              "AMD GPU 0x1234",
+		"AMD Instinct MI250X": "AMD Instinct MI250X",
+		"":                    "",
+	}
+	for in, want := range cases {
+		if got := amdNameFromID(in); got != want {
+			t.Errorf("amdNameFromID(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
