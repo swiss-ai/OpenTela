@@ -1,0 +1,332 @@
+{
+    "gpu_data": [
+        {
+            "gpu": 0,
+            "mem_usage": {
+                "total_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 524288,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 12,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 524276,
+                    "unit": "MB"
+                }
+            }
+        },
+        {
+            "gpu": 1,
+            "mem_usage": {
+                "total_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 524288,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 12,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 524276,
+                    "unit": "MB"
+                }
+            }
+        },
+        {
+            "gpu": 2,
+            "mem_usage": {
+                "total_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 524288,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 12,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 524276,
+                    "unit": "MB"
+                }
+            }
+        },
+        {
+            "gpu": 3,
+            "mem_usage": {
+                "total_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 524288,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 12,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 524276,
+                    "unit": "MB"
+                }
+            }
+        },
+        {
+            "gpu": 4,
+            "mem_usage": {
+                "total_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 524288,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 12,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 524276,
+                    "unit": "MB"
+                }
+            }
+        },
+        {
+            "gpu": 5,
+            "mem_usage": {
+                "total_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 524288,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 12,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 524276,
+                    "unit": "MB"
+                }
+            }
+        },
+        {
+            "gpu": 6,
+            "mem_usage": {
+                "total_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 524288,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 12,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 524276,
+                    "unit": "MB"
+                }
+            }
+        },
+        {
+            "gpu": 7,
+            "mem_usage": {
+                "total_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 65520,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 10,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 65510,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 524288,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 12,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 524276,
+                    "unit": "MB"
+                }
+            }
+        }
+    ]
+}

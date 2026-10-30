@@ -1,0 +1,220 @@
+{
+    "gpu_data": [
+        {
+            "gpu": 0,
+            "asic": {
+                "market_name": "AMD Instinct MI250X",
+                "vendor_id": "0x1002",
+                "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+                "subvendor_id": "0x1002",
+                "device_id": "0x7408",
+                "subsystem_id": "0x0b0c",
+                "rev_id": "0x00",
+                "chip_rev_id": "0x01",
+                "external_rev_id": "0x3d",
+                "asic_serial": "0x000000000000A000",
+                "oam_id": 0,
+                "physical_acc_id": "N/A",
+                "num_compute_units": 110,
+                "target_graphics_version": "gfx90a",
+                "flags": 0
+            },
+            "board": {
+                "model_number": "102-D65201-00",
+                "product_serial": "OAM0000",
+                "fru_id": "113-SHOD65201000C.020",
+                "product_name": "AMD INSTINCT MI200 (MCM) OAM LC MBA HPE C2",
+                "manufacturer_name": "AMD"
+            }
+        },
+        {
+            "gpu": 1,
+            "asic": {
+                "market_name": "AMD Instinct MI250X",
+                "vendor_id": "0x1002",
+                "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+                "subvendor_id": "0x1002",
+                "device_id": "0x7408",
+                "subsystem_id": "0x0b0c",
+                "rev_id": "0x00",
+                "chip_rev_id": "0x01",
+                "external_rev_id": "0x3d",
+                "asic_serial": "0x000000000000A001",
+                "oam_id": 1,
+                "physical_acc_id": "N/A",
+                "num_compute_units": 110,
+                "target_graphics_version": "gfx90a",
+                "flags": 0
+            },
+            "board": {
+                "model_number": "102-D65201-00",
+                "product_serial": "OAM0000",
+                "fru_id": "113-SHOD65201000C.020",
+                "product_name": "AMD INSTINCT MI200 (MCM) OAM LC MBA HPE C2",
+                "manufacturer_name": "AMD"
+            }
+        },
+        {
+            "gpu": 2,
+            "asic": {
+                "market_name": "AMD Instinct MI250X",
+                "vendor_id": "0x1002",
+                "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+                "subvendor_id": "0x1002",
+                "device_id": "0x7408",
+                "subsystem_id": "0x0b0c",
+                "rev_id": "0x00",
+                "chip_rev_id": "0x01",
+                "external_rev_id": "0x3d",
+                "asic_serial": "0x000000000000A002",
+                "oam_id": 2,
+                "physical_acc_id": "N/A",
+                "num_compute_units": 110,
+                "target_graphics_version": "gfx90a",
+                "flags": 0
+            },
+            "board": {
+                "model_number": "102-D65201-00",
+                "product_serial": "OAM0001",
+                "fru_id": "113-SHOD65201000C.020",
+                "product_name": "AMD INSTINCT MI200 (MCM) OAM LC MBA HPE C2",
+                "manufacturer_name": "AMD"
+            }
+        },
+        {
+            "gpu": 3,
+            "asic": {
+                "market_name": "AMD Instinct MI250X",
+                "vendor_id": "0x1002",
+                "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+                "subvendor_id": "0x1002",
+                "device_id": "0x7408",
+                "subsystem_id": "0x0b0c",
+                "rev_id": "0x00",
+                "chip_rev_id": "0x01",
+                "external_rev_id": "0x3d",
+                "asic_serial": "0x000000000000A003",
+                "oam_id": 3,
+                "physical_acc_id": "N/A",
+                "num_compute_units": 110,
+                "target_graphics_version": "gfx90a",
+                "flags": 0
+            },
+            "board": {
+                "model_number": "102-D65201-00",
+                "product_serial": "OAM0001",
+                "fru_id": "113-SHOD65201000C.020",
+                "product_name": "AMD INSTINCT MI200 (MCM) OAM LC MBA HPE C2",
+                "manufacturer_name": "AMD"
+            }
+        },
+        {
+            "gpu": 4,
+            "asic": {
+                "market_name": "AMD Instinct MI250X",
+                "vendor_id": "0x1002",
+                "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+                "subvendor_id": "0x1002",
+                "device_id": "0x7408",
+                "subsystem_id": "0x0b0c",
+                "rev_id": "0x00",
+                "chip_rev_id": "0x01",
+                "external_rev_id": "0x3d",
+                "asic_serial": "0x000000000000A004",
+                "oam_id": 4,
+                "physical_acc_id": "N/A",
+                "num_compute_units": 110,
+                "target_graphics_version": "gfx90a",
+                "flags": 0
+            },
+            "board": {
+                "model_number": "102-D65201-00",
+                "product_serial": "OAM0002",
+                "fru_id": "113-SHOD65201000C.020",
+                "product_name": "AMD INSTINCT MI200 (MCM) OAM LC MBA HPE C2",
+                "manufacturer_name": "AMD"
+            }
+        },
+        {
+            "gpu": 5,
+            "asic": {
+                "market_name": "AMD Instinct MI250X",
+                "vendor_id": "0x1002",
+                "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+                "subvendor_id": "0x1002",
+                "device_id": "0x7408",
+                "subsystem_id": "0x0b0c",
+                "rev_id": "0x00",
+                "chip_rev_id": "0x01",
+                "external_rev_id": "0x3d",
+                "asic_serial": "0x000000000000A005",
+                "oam_id": 5,
+                "physical_acc_id": "N/A",
+                "num_compute_units": 110,
+                "target_graphics_version": "gfx90a",
+                "flags": 0
+            },
+            "board": {
+                "model_number": "102-D65201-00",
+                "product_serial": "OAM0002",
+                "fru_id": "113-SHOD65201000C.020",
+                "product_name": "AMD INSTINCT MI200 (MCM) OAM LC MBA HPE C2",
+                "manufacturer_name": "AMD"
+            }
+        },
+        {
+            "gpu": 6,
+            "asic": {
+                "market_name": "AMD Instinct MI250X",
+                "vendor_id": "0x1002",
+                "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+                "subvendor_id": "0x1002",
+                "device_id": "0x7408",
+                "subsystem_id": "0x0b0c",
+                "rev_id": "0x00",
+                "chip_rev_id": "0x01",
+                "external_rev_id": "0x3d",
+                "asic_serial": "0x000000000000A006",
+                "oam_id": 6,
+                "physical_acc_id": "N/A",
+                "num_compute_units": 110,
+                "target_graphics_version": "gfx90a",
+                "flags": 0
+            },
+            "board": {
+                "model_number": "102-D65201-00",
+                "product_serial": "OAM0003",
+                "fru_id": "113-SHOD65201000C.020",
+                "product_name": "AMD INSTINCT MI200 (MCM) OAM LC MBA HPE C2",
+                "manufacturer_name": "AMD"
+            }
+        },
+        {
+            "gpu": 7,
+            "asic": {
+                "market_name": "AMD Instinct MI250X",
+                "vendor_id": "0x1002",
+                "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+                "subvendor_id": "0x1002",
+                "device_id": "0x7408",
+                "subsystem_id": "0x0b0c",
+                "rev_id": "0x00",
+                "chip_rev_id": "0x01",
+                "external_rev_id": "0x3d",
+                "asic_serial": "0x000000000000A007",
+                "oam_id": 7,
+                "physical_acc_id": "N/A",
+                "num_compute_units": 110,
+                "target_graphics_version": "gfx90a",
+                "flags": 0
+            },
+            "board": {
+                "model_number": "102-D65201-00",
+                "product_serial": "OAM0003",
+                "fru_id": "113-SHOD65201000C.020",
+                "product_name": "AMD INSTINCT MI200 (MCM) OAM LC MBA HPE C2",
+                "manufacturer_name": "AMD"
+            }
+        }
+    ]
+}

@@ -45,6 +45,29 @@ func TestParseAMDSMI(t *testing.T) {
 	}
 }
 
+// MI250X (Beverin mi200): amd-smi lists each of the 2 dies per OAM package as
+// a GPU; the dies share board.product_serial (serials anonymised in the fixture).
+func TestParseAMDSMIMergesMultiDiePackages(t *testing.T) {
+	static, err := os.ReadFile("testdata/amdsmi_static_mi250x.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	usage, err := os.ReadFile("testdata/amdsmi_memusage_mi250x.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gpus := parseAMDSMI(static, usage)
+	if len(gpus) != 4 {
+		t.Fatalf("want 4 GPUs (8 dies merged in pairs), got %d: %+v", len(gpus), gpus)
+	}
+	for _, g := range gpus {
+		if g.Name != "AMD Instinct MI250X" || g.TotalMemory != 2*65520 || g.UsedMemory != 2*10 {
+			t.Fatalf("unexpected GPU %+v", g)
+		}
+	}
+}
+
 func TestToMiB(t *testing.T) {
 	cases := map[amdSMIValue]int64{
 		{Value: 131072, Unit: "MB"}:      131072,

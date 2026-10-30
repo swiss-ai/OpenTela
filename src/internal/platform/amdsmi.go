@@ -9,9 +9,13 @@ import (
 )
 
 // amd-smi is rocm-smi's replacement; newer ROCm images ship only amd-smi.
-// Two calls: `static --asic` for the product name, `metric --mem-usage` for
-// total/used VRAM. Both print {"gpu_data": [...]} (older amd-smi versions
-// print the bare list), keyed by "gpu" index.
+// Two calls: `static --asic --board` for the product name and board serial,
+// `metric --mem-usage` for total/used VRAM. Both print {"gpu_data": [...]}
+// (older amd-smi versions print the bare list), keyed by "gpu" index.
+//
+// amd-smi lists each die of a multi-die package (MI250X: 2 GCDs per OAM) as
+// its own GPU; the dies share the board's product serial, so entries with the
+// same serial are merged into one GPU, as getAMDGPUs does for rocm-smi's MCM.
 
 type amdSMIValue struct {
 	Value float64 `json:"value"`
@@ -23,6 +27,9 @@ type amdSMIGPU struct {
 	ASIC struct {
 		MarketName string `json:"market_name"`
 	} `json:"asic"`
+	Board struct {
+		ProductSerial string `json:"product_serial"`
+	} `json:"board"`
 	MemUsage struct {
 		TotalVRAM amdSMIValue `json:"total_vram"`
 		UsedVRAM  amdSMIValue `json:"used_vram"`
@@ -30,7 +37,7 @@ type amdSMIGPU struct {
 }
 
 func getAMDSMIGPUs() []common.GPUSpec {
-	static, err := runAMDSMI("static", "--asic", "--json")
+	static, err := runAMDSMI("static", "--asic", "--board", "--json")
 	if err != nil {
 		common.Logger.Debug("amd-smi unavailable: ", err)
 		return []common.GPUSpec{}
@@ -62,6 +69,7 @@ func parseAMDSMI(static, usage []byte) []common.GPUSpec {
 			mem[u.GPU] = u
 		}
 	}
+	bySerial := map[string]int{} // board serial -> index in gpus
 	for _, g := range names {
 		if g.ASIC.MarketName == "" || g.ASIC.MarketName == "N/A" {
 			continue
@@ -71,6 +79,17 @@ func parseAMDSMI(static, usage []byte) []common.GPUSpec {
 			spec.TotalMemory = toMiB(u.MemUsage.TotalVRAM)
 			spec.UsedMemory = toMiB(u.MemUsage.UsedVRAM)
 		}
+		serial := g.Board.ProductSerial
+		if serial == "" || serial == "N/A" {
+			gpus = append(gpus, spec)
+			continue
+		}
+		if i, ok := bySerial[serial]; ok {
+			gpus[i].TotalMemory += spec.TotalMemory
+			gpus[i].UsedMemory += spec.UsedMemory
+			continue
+		}
+		bySerial[serial] = len(gpus)
 		gpus = append(gpus, spec)
 	}
 	return gpus
